@@ -1,4 +1,5 @@
 use smol::lexer::Lexer;
+use smol::parser::Parser;
 use std::fs;
 use std::env;
 
@@ -7,6 +8,8 @@ fn main() {
     let source = read_file(&args[1]);
     let tokens = Lexer::new(source).lex();
     println!("{:#?}", tokens);
+    let mut parser = Parser::new(tokens);
+    println!("{:#?}", parser.parse());
 }
 
 fn read_file(filepath: &str) -> String {

@@ -76,75 +76,75 @@ impl Lexer {
             } else if c == '=' {
                 if self.current() == '=' {
                     tokens.push(Token::Equals);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Equal);
             } else if c == '+' {
                 if self.current() == '=' {
                     tokens.push(Token::PlusEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Plus);
             } else if c == '-' {
                 if self.current() == '=' {
                     tokens.push(Token::MinusEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Minus);
             } else if c == '*' {
                 if self.current() == '=' {
                     tokens.push(Token::MulEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Asterisk);
             } else if c == '/' {
                 if self.current() == '=' {
                     tokens.push(Token::DivEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Div);
             } else if c == '%' {
                 if self.current() == '=' {
                     tokens.push(Token::ModuloEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Modulo);
             } else if c == '<' {
                 if self.current() == '=' {
                     tokens.push(Token::LessEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Less);
             } else if c == '>' {
                 if self.current() == '=' {
                     tokens.push(Token::GreaterEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Greater);
             } else if c == '&' {
                 if self.current() == '&' {
                     tokens.push(Token::And);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
             } else if c == '|' {
                 if self.current() == '|' {
                     tokens.push(Token::Or);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
             } else if c == '!' {
                 if self.current() == '=' {
                     tokens.push(Token::NotEq);
-                    c = self.chop();
+                    _ = self.chop();
                     continue;
                 }
                 tokens.push(Token::Not);
