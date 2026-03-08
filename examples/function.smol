@@ -1,0 +1,14 @@
+fn factorial(x: int) int {
+    let f: int = 1;
+    let it: int = 1;
+    while (it <= x) {
+        f *= it;
+        it += 1;
+    }
+    return f;
+}
+
+fn main() {
+    let x: int = 6;
+    printf("%d! = %d\n", x, factorial(x));
+}

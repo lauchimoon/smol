@@ -1,0 +1,17 @@
+fn main() {
+    let x: int = 34;
+    let y: int = -35;
+    if (x >= 0 || y >= 0) {
+        printf("There is at least one nonnegative number.\n");
+    } elif (x < 0 && y < 0) {
+        printf("Both are negative numbers.\n");
+    } elif (x == 0 || y == 0) {
+        printf("One of the numbers is 0.\n");
+    } else {
+        printf("Unknown case.\n");
+    }
+
+    if (!false) {
+        printf("Always prints.\n");
+    }
+}
