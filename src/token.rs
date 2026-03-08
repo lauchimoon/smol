@@ -46,6 +46,8 @@ pub enum Token {
     Elif,
     Else,
     While,
+    Return,
 
+    EOF,
     Unknown(String),
 }

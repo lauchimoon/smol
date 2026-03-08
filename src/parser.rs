@@ -1,5 +1,6 @@
 use crate::token::Token;
 use crate::ast::Expr;
+use crate::ast::Stmt;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -11,8 +12,33 @@ impl Parser {
         Parser {tokens: tokens, cursor: 0}
     }
 
-    pub fn parse(&mut self) -> Expr {
-        self.expression()
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut stmts: Vec<Stmt> = Vec::new();
+        while !self.is_at_end() {
+            stmts.push(self.statement());
+        }
+        stmts
+    }
+
+    fn statement(&mut self) -> Stmt {
+        if matches!(self.current(), Token::Return) {
+            self.advance();
+            return self.ret();
+        }
+        Stmt::Expression(self.expression())
+    }
+
+    fn ret(&mut self) -> Stmt {
+        if matches!(self.current(), Token::Semicolon) {
+            self.advance();
+            return Stmt::Return(None);
+        }
+        let expr = self.expression();
+        let check = self.consume();
+        if !matches!(check, Token::Semicolon) {
+            panic!("expected ';', found {:#?}", check);
+        }
+        return Stmt::Return(Some(expr));
     }
 
     fn expression(&mut self) -> Expr {
@@ -106,9 +132,17 @@ impl Parser {
         &self.tokens[self.cursor]
     }
 
+    fn advance(&mut self) {
+        self.cursor += 1;
+    }
+
     fn consume(&mut self) -> &Token {
         let token = &self.tokens[self.cursor];
         self.cursor += 1;
         token
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.current().clone() == Token::EOF
     }
 }

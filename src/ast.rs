@@ -7,3 +7,19 @@ pub enum Expr {
     Literal(Token),
     Grouping(Box<Expr>)
 }
+
+// stmt ::= return expr? ";" |
+//          let symbol ":" type = expr ";" |
+//          while "(" expr ")" { stmt* } |
+//          if "(" expr ")" { stmt* } ((elif "(" expr ")" { stmt* })*)? (else { stmt* })? |
+//          "{" stmt* "}" |
+//          expr-stmt
+#[derive(Debug)]
+pub enum Stmt {
+    Return(Option<Expr>),
+    Let(String, Token, Expr),
+    While(Expr, Vec<Stmt>),
+    If(Expr, Vec<Stmt>, Option<Box<Stmt>>),
+    Block(Vec<Stmt>),
+    Expression(Expr),
+}

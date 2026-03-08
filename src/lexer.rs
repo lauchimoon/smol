@@ -152,6 +152,7 @@ impl Lexer {
                 tokens.push(Token::Unknown(String::from(c)));
             }
         }
+        tokens.push(Token::EOF);
         tokens
     }
 
