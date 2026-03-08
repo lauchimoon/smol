@@ -29,6 +29,10 @@ impl Parser {
             self.advance();
             return self.let_stmt();
         }
+        if matches!(self.current(), Token::While) {
+            self.advance();
+            return self.while_stmt();
+        }
         Stmt::Expression(self.expression())
     }
 
@@ -38,40 +42,43 @@ impl Parser {
             return Stmt::Return(None);
         }
         let expr = self.expression();
-        let check = self.consume();
-        if !matches!(check, Token::Semicolon) {
-            panic!("expected ';', found {:#?}", check);
-        }
+        self.consume_expected(Token::Semicolon, "return: expected ';'");
         return Stmt::Return(Some(expr));
     }
 
     fn let_stmt(&mut self) -> Stmt {
         let name = self.consume().clone();
         if !matches!(name, Token::Symbol(_)) {
-            panic!("expected Symbol, got {:#?}", name);
+            panic!("let: expected Symbol, got {:#?}", name);
         }
-
-        let mut check = self.consume().clone();
-        if !matches!(check, Token::Colon) {
-            panic!("expected ':', got {:#?}", check);
-        }
-
+        self.consume_expected(Token::Colon, "let: expected ':'");
         let typ = self.consume().clone();
         if !matches!(typ, Token::Symbol(_)) {
-            panic!("expected Symbol, got {:#?}", typ);
+            panic!("let: expected Symbol, got {:#?}", typ);
         }
-
-        check = self.consume().clone();
-        if !matches!(check, Token::Equal) {
-            panic!("expected '=', got {:#?}", check);
-        }
-
+        self.consume_expected(Token::Equal, "let: expected '='");
         let value = self.expression();
-        check = self.consume().clone();
-        if !matches!(check, Token::Semicolon) {
-            panic!("expected ';', found {:#?}", check);
-        }
+        self.consume_expected(Token::Semicolon, "let: expected ';'");
         Stmt::Let(name, typ, value)
+    }
+
+    fn while_stmt(&mut self) -> Stmt {
+        self.consume_expected(Token::OpenParen, "while: expected '('");
+        let cond = self.expression();
+        self.consume_expected(Token::CloseParen, "while: expected ')'");
+        let body = self.block();
+        Stmt::While(cond, body)
+    }
+
+    fn block(&mut self) -> Vec<Stmt> {
+        let mut stmts: Vec<Stmt> = Vec::new();
+        self.consume_expected(Token::OpenCurly, "block: expected '{{'");
+        while !matches!(self.current(), Token::CloseCurly) && !self.is_at_end() {
+            stmts.push(self.statement());
+        }
+
+        self.consume_expected(Token::CloseCurly, "block: expected '}}'");
+        stmts
     }
 
     fn expression(&mut self) -> Expr {
@@ -142,13 +149,10 @@ impl Parser {
         if matches!(self.current(), Token::OpenParen) {
             self.advance();
             let expr = self.expression();
-            let check = self.consume().clone();
-            if check != Token::CloseParen {
-                panic!("expected ')', found {:#?}", check);
-            }
+            self.consume_expected(Token::CloseParen, "expression: expected ')'");
             return Expr::Grouping(Box::new(expr));
         }
-        panic!("unknown");
+        panic!("expression: unknown case {:#?}", self.current());
     }
 
     fn previous(&self) -> &Token {
@@ -178,5 +182,12 @@ impl Parser {
 
     fn is_at_end(&self) -> bool {
         self.current().clone() == Token::EOF
+    }
+
+    fn consume_expected(&mut self, expected: Token, message: &str) {
+        let check = self.consume().clone();
+        if check != expected {
+            panic!("{}", message);
+        }
     }
 }
