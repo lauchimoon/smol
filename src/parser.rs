@@ -140,6 +140,7 @@ impl Parser {
             return Expr::Literal(token);
         }
         if matches!(self.current(), Token::OpenParen) {
+            self.advance();
             let expr = self.expression();
             let check = self.consume().clone();
             if check != Token::CloseParen {
