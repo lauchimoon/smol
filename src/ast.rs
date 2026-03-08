@@ -17,7 +17,7 @@ pub enum Expr {
 #[derive(Debug)]
 pub enum Stmt {
     Return(Option<Expr>),
-    Let(String, Token, Expr),
+    Let(Token, Token, Expr),
     While(Expr, Vec<Stmt>),
     If(Expr, Vec<Stmt>, Option<Box<Stmt>>),
     Block(Vec<Stmt>),

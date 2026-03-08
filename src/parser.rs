@@ -23,12 +23,16 @@ impl Parser {
     fn statement(&mut self) -> Stmt {
         if matches!(self.current(), Token::Return) {
             self.advance();
-            return self.ret();
+            return self.return_stmt();
+        }
+        if matches!(self.current(), Token::Let) {
+            self.advance();
+            return self.let_stmt();
         }
         Stmt::Expression(self.expression())
     }
 
-    fn ret(&mut self) -> Stmt {
+    fn return_stmt(&mut self) -> Stmt {
         if matches!(self.current(), Token::Semicolon) {
             self.advance();
             return Stmt::Return(None);
@@ -39,6 +43,35 @@ impl Parser {
             panic!("expected ';', found {:#?}", check);
         }
         return Stmt::Return(Some(expr));
+    }
+
+    fn let_stmt(&mut self) -> Stmt {
+        let name = self.consume().clone();
+        if !matches!(name, Token::Symbol(_)) {
+            panic!("expected Symbol, got {:#?}", name);
+        }
+
+        let mut check = self.consume().clone();
+        if !matches!(check, Token::Colon) {
+            panic!("expected ':', got {:#?}", check);
+        }
+
+        let typ = self.consume().clone();
+        if !matches!(typ, Token::Symbol(_)) {
+            panic!("expected Symbol, got {:#?}", typ);
+        }
+
+        check = self.consume().clone();
+        if !matches!(check, Token::Equal) {
+            panic!("expected '=', got {:#?}", check);
+        }
+
+        let value = self.expression();
+        check = self.consume().clone();
+        if !matches!(check, Token::Semicolon) {
+            panic!("expected ';', found {:#?}", check);
+        }
+        Stmt::Let(name, typ, value)
     }
 
     fn expression(&mut self) -> Expr {

@@ -176,10 +176,6 @@ impl Lexer {
         match value.as_str() {
             "fn" => Token::Func,
             "let" => Token::Let,
-            "int" => Token::IntType,
-            "float" => Token::FloatType,
-            "string" => Token::StringType,
-            "bool" => Token::BoolType,
             "false" => Token::False,
             "true" => Token::True,
             "if" => Token::If,
