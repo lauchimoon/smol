@@ -146,6 +146,10 @@ impl Parser {
             let token = self.consume().clone();
             return Expr::Literal(token);
         }
+        if matches!(self.current(), Token::Symbol(_)) {
+            let token = self.consume().clone();
+            return Expr::Variable(token);
+        }
         if matches!(self.current(), Token::OpenParen) {
             self.advance();
             let expr = self.expression();
