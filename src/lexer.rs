@@ -185,6 +185,7 @@ impl Lexer {
             "elif" => Token::Elif,
             "else" => Token::Else,
             "while" => Token::While,
+            "return" => Token::Return,
             _ => Token::Symbol(value)
         }
     }
