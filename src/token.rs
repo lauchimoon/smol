@@ -11,7 +11,7 @@ pub enum Token {
     Equal,
     Plus,
     Minus,
-    Asterisk,
+    Mul,
     Div,
     Modulo,
     PlusEq,

@@ -6,7 +6,8 @@ pub enum Expr {
     Unary(Token, Box<Expr>),
     Literal(Token),
     Variable(Token),
-    Grouping(Box<Expr>)
+    Grouping(Box<Expr>),
+    Assignment(Box<Expr>, Box<Expr>),
 }
 
 // stmt ::= return expr? ";" |

@@ -33,7 +33,9 @@ impl Parser {
             self.advance();
             return self.while_stmt();
         }
-        Stmt::Expression(self.expression())
+        let expr = Stmt::Expression(self.expression());
+        self.consume_expected(Token::Semicolon, "expected ';'");
+        expr
     }
 
     fn return_stmt(&mut self) -> Stmt {
@@ -76,13 +78,25 @@ impl Parser {
         while !matches!(self.current(), Token::CloseCurly) && !self.is_at_end() {
             stmts.push(self.statement());
         }
-
         self.consume_expected(Token::CloseCurly, "block: expected '}}'");
         stmts
     }
 
     fn expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+        if matches!(self.current(), Token::Equal) {
+            self.advance();
+            let value = self.assignment();
+            if matches!(expr, Expr::Variable(_)) {
+                return Expr::Assignment(Box::new(expr), Box::new(value));
+            }
+            panic!("invalid assignment target");
+        }
+        expr
     }
 
     fn equality(&mut self) -> Expr {
@@ -118,7 +132,7 @@ impl Parser {
 
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
-        while matches!(self.current(), Token::Asterisk | Token::Div) {
+        while matches!(self.current(), Token::Mul | Token::Div) {
             let op = self.consume().clone();
             let right = self.unary();
             expr = Expr::Binary(Box::new(expr), op, Box::new(right));

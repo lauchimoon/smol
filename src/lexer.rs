@@ -100,7 +100,7 @@ impl Lexer {
                     _ = self.chop();
                     continue;
                 }
-                tokens.push(Token::Asterisk);
+                tokens.push(Token::Mul);
             } else if c == '/' {
                 if self.current() == '=' {
                     tokens.push(Token::DivEq);
