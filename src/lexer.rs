@@ -179,7 +179,6 @@ impl Lexer {
             "false" => Token::False,
             "true" => Token::True,
             "if" => Token::If,
-            "elif" => Token::Elif,
             "else" => Token::Else,
             "while" => Token::While,
             "return" => Token::Return,

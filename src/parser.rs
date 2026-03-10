@@ -33,6 +33,10 @@ impl Parser {
             self.advance();
             return self.while_stmt();
         }
+        if matches!(self.current(), Token::If) {
+            self.advance();
+            return self.if_stmt();
+        }
         let expr = Stmt::Expression(self.expression());
         self.consume_expected(Token::Semicolon, "expected ';'");
         expr
@@ -80,6 +84,24 @@ impl Parser {
         }
         self.consume_expected(Token::CloseCurly, "block: expected '}}'");
         stmts
+    }
+
+    fn if_stmt(&mut self) -> Stmt {
+        self.consume_expected(Token::OpenParen, "if: expected '('");
+        let cond = self.expression();
+        self.consume_expected(Token::CloseParen, "if: expected ')'");
+        let then_block = Box::new(Stmt::Block(self.block()));
+        let mut else_block = None;
+        if matches!(self.current(), Token::Else) {
+            self.advance();
+            if matches!(self.current(), Token::If) {
+                self.advance();
+                else_block = Some(Box::new(self.if_stmt()));
+            } else {
+                else_block = Some(Box::new(Stmt::Block(self.block())));
+            }
+        }
+        Stmt::If(cond, then_block, else_block)
     }
 
     fn expression(&mut self) -> Expr {

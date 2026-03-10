@@ -43,7 +43,6 @@ pub enum Token {
     False,
     True,
     If,
-    Elif,
     Else,
     While,
     Return,
