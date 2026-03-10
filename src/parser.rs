@@ -188,7 +188,35 @@ impl Parser {
             let right = self.unary();
             return Expr::Unary(op, Box::new(right));
         }
-        self.primary()
+        self.func_call()
+    }
+
+    fn func_call(&mut self) -> Expr {
+        let mut expr = self.primary();
+        loop {
+            if matches!(self.current(), Token::OpenParen) {
+                self.advance();
+                expr = self.finish_func_call(expr);
+            }
+            break;
+        }
+        expr
+    }
+
+    fn finish_func_call(&mut self, callee: Expr) -> Expr {
+        let mut args: Vec<Expr> = Vec::new();
+        if !matches!(self.current(), Token::CloseParen) {
+            args.push(self.expression());
+            while matches!(self.current(), Token::Comma) {
+                if args.len() >= 255 {
+                    panic!("func_call: cannot have more than 255 arguments");
+                }
+                self.advance();
+                args.push(self.expression());
+            }
+        }
+        self.consume_expected(Token::CloseParen, "func_call: expected ')'");
+        Expr::FuncCall(Box::new(callee), args)
     }
 
     fn primary(&mut self) -> Expr {

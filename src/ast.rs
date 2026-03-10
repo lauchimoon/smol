@@ -4,6 +4,7 @@ use crate::token::Token;
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Unary(Token, Box<Expr>),
+    FuncCall(Box<Expr>, Vec<Expr>),
     Literal(Token),
     Variable(Token),
     Grouping(Box<Expr>),
