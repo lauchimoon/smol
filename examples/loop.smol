@@ -1,4 +1,4 @@
-fn main() {
+fn main() void {
     let x0: int = 18;
     let y0: int = 6;
 

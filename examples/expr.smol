@@ -1,4 +1,4 @@
-fn main() {
+fn main() void {
     let a: int = 34;
     let b: int = 35;
     let c: float = 100.123;
