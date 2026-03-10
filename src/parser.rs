@@ -109,7 +109,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Expr {
-        let expr = self.equality();
+        let expr = self.or();
         if matches!(self.current(), Token::Equal) {
             self.advance();
             let value = self.assignment();
@@ -117,6 +117,26 @@ impl Parser {
                 return Expr::Assignment(Box::new(expr), Box::new(value));
             }
             panic!("invalid assignment target");
+        }
+        expr
+    }
+
+    fn or(&mut self) -> Expr {
+        let mut expr = self.and();
+        while matches!(self.current(), Token::Or) {
+            let op = self.consume().clone();
+            let right = self.and();
+            expr = Expr::Logical(Box::new(expr), op, Box::new(right));
+        }
+        expr
+    }
+
+    fn and(&mut self) -> Expr {
+        let mut expr = self.equality();
+        while matches!(self.current(), Token::And) {
+            let op = self.consume().clone();
+            let right = self.equality();
+            expr = Expr::Logical(Box::new(expr), op, Box::new(right));
         }
         expr
     }

@@ -8,6 +8,7 @@ pub enum Expr {
     Variable(Token),
     Grouping(Box<Expr>),
     Assignment(Box<Expr>, Box<Expr>),
+    Logical(Box<Expr>, Token, Box<Expr>),
 }
 
 // stmt ::= return expr? ";" |
