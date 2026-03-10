@@ -20,7 +20,7 @@ pub enum Expr {
 pub enum Stmt {
     Return(Option<Expr>),
     Let(Token, Token, Expr),
-    While(Expr, Vec<Stmt>),
+    While(Expr, Box<Stmt>),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     Block(Vec<Stmt>),
     Expression(Expr),

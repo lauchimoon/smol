@@ -72,7 +72,7 @@ impl Parser {
         self.consume_expected(Token::OpenParen, "while: expected '('");
         let cond = self.expression();
         self.consume_expected(Token::CloseParen, "while: expected ')'");
-        let body = self.block();
+        let body = Box::new(Stmt::Block(self.block()));
         Stmt::While(cond, body)
     }
 
