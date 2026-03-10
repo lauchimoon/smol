@@ -21,6 +21,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Stmt {
+        if matches!(self.current(), Token::Func) {
+            self.advance();
+            return self.fn_stmt();
+        }
         if matches!(self.current(), Token::Return) {
             self.advance();
             return self.return_stmt();
@@ -38,8 +42,46 @@ impl Parser {
             return self.if_stmt();
         }
         let expr = Stmt::Expression(self.expression());
-        self.consume_expected(Token::Semicolon, "expected ';'");
+        self.consume_expected(Token::Semicolon, "statement: expected ';'");
         expr
+    }
+
+    fn fn_stmt(&mut self) -> Stmt {
+        let name = self.consume().clone();
+        if !matches!(name, Token::Symbol(_)) {
+            panic!("fn: expected Symbol for name, got {:#?}", name);
+        }
+        self.consume_expected(Token::OpenParen, "fn: expected '('");
+
+        let mut params: Vec<(Token, Token)> = Vec::new();
+        if !matches!(self.current(), Token::CloseParen) {
+            params.push(self.param());
+            while matches!(self.current(), Token::Comma) {
+                self.advance();
+                params.push(self.param());
+            }
+        }
+        self.consume_expected(Token::CloseParen, "fn: expected ')'");
+
+        let ret_type = self.consume().clone();
+        if !matches!(ret_type, Token::Symbol(_)) {
+            panic!("fn: expected Symbol for return type, got {:#?}", ret_type);
+        }
+        let body = Box::new(Stmt::Block(self.block()));
+        Stmt::Func(name, params, ret_type, body)
+    }
+
+    fn param(&mut self) -> (Token, Token) {
+        let name = self.consume().clone();
+        if !matches!(name, Token::Symbol(_)) {
+            panic!("fn parameter: expected Symbol for name, got {:#?}", name);
+        }
+        self.consume_expected(Token::Colon, "fn parameter: expected ':'");
+        let typ = self.consume().clone();
+        if !matches!(typ, Token::Symbol(_)) {
+            panic!("fn parameter: expected Symbol for typ, got {:#?}", typ);
+        }
+        (name, typ)
     }
 
     fn return_stmt(&mut self) -> Stmt {

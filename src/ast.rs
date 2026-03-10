@@ -17,6 +17,7 @@ pub enum Expr {
 //          while "(" expr ")" { stmt* } |
 //          if "(" expr ")" { stmt* } (else { stmt* })? |
 //          "{" stmt* "}" |
+//          fn symbol "(" param ("," param)* ")" symbol { stmt* }, where param ::= symbol: symbol |
 //          expr-stmt
 #[derive(Debug)]
 pub enum Stmt {
@@ -25,5 +26,6 @@ pub enum Stmt {
     While(Expr, Box<Stmt>),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
     Block(Vec<Stmt>),
+    Func(Token, Vec<(Token, Token)>, Token, Box<Stmt>),
     Expression(Expr),
 }
