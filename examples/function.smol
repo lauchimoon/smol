@@ -2,8 +2,8 @@ fn factorial(x: int) int {
     let f: int = 1;
     let it: int = 1;
     while (it <= x) {
-        f *= it;
-        it += 1;
+        f = f*it;
+        it = it + 1;
     }
     return f;
 }
