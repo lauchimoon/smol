@@ -263,9 +263,11 @@ impl Parser {
 
     fn primary(&mut self) -> Expr {
         if matches!(self.current(), Token::False) {
+            self.advance();
             return Expr::Literal(Token::False);
         }
         if matches!(self.current(), Token::True) {
+            self.advance();
             return Expr::Literal(Token::True);
         }
         if matches!(self.current(), Token::Str(_) | Token::Number(_)) {
