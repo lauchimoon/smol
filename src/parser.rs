@@ -216,7 +216,7 @@ impl Parser {
 
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
-        while matches!(self.current(), Token::Mul | Token::Div) {
+        while matches!(self.current(), Token::Modulo | Token::Mul | Token::Div) {
             let op = self.consume().clone();
             let right = self.unary();
             expr = Expr::Binary(Box::new(expr), op, Box::new(right));
