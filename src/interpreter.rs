@@ -40,7 +40,9 @@ impl Interpreter {
     fn eval(&self, expression: &Expr) -> Value {
         match expression {
             Expr::Literal(v) => self.eval_literal(v),
-            Expr::Unary(v, e) => self.eval_unary(v, e),
+            Expr::Unary(v, op) => self.eval_unary(v, op),
+            Expr::Binary(left, op, right) => self.eval_binary(left, op, right),
+            Expr::Grouping(exp) => self.eval(exp),
             _ => todo!()
         }
     }
@@ -90,8 +92,45 @@ impl Interpreter {
                     panic!("invalid bool type to negate: {:#?}", value);
                 }
             }
-            _ => todo!()
+            _ => panic!("not an unary expression: {:#?}", v)
         }
-        Value::Bool(false)
+    }
+
+    fn eval_binary(&self, left: &Expr, op: &Token, right: &Expr) -> Value {
+        let left_value = self.eval(left);
+        let right_value = self.eval(right);
+        self.perform_op(left_value, op, right_value)
+    }
+
+    fn perform_op(&self, left: Value, op: &Token, right: Value) -> Value {
+        match (left, right) {
+            (Value::Int(lv), Value::Int(rv)) => {
+                match op {
+                    Token::Plus => Value::Int(lv + rv),
+                    Token::Minus => Value::Int(lv - rv),
+                    Token::Mul => Value::Int(lv*rv),
+                    Token::Div => Value::Int(lv/rv),
+                    Token::Modulo => Value::Int(lv%rv),
+                    _ => panic!("unknown operator {:#?}", op),
+                }
+            }
+            (Value::Float(lv), Value::Float(rv)) => {
+                match op {
+                    Token::Plus => Value::Float(lv + rv),
+                    Token::Minus => Value::Float(lv - rv),
+                    Token::Mul => Value::Float(lv*rv),
+                    Token::Div => Value::Float(lv/rv),
+                    Token::Modulo => Value::Float(lv%rv),
+                    _ => panic!("unknown operator {:#?}", op),
+                }
+            }
+            (Value::Str(lv), Value::Str(rv)) => {
+                match op {
+                    Token::Plus => Value::Str(lv + &rv),
+                    _ => panic!("operator {:#?} not valid for string", op),
+                }
+            }
+            _ => panic!("invalid types to operate on"),
+        }
     }
 }
