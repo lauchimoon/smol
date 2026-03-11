@@ -15,7 +15,7 @@ impl Environment {
 
     pub fn insert(&mut self, name: String, value: Value) {
         if self.values.contains_key(&name) {
-            panic!("{name} being redefined");
+            panic!("key '{name}' is being redefined");
         }
         self.values.insert(name, value);
     }
@@ -23,7 +23,7 @@ impl Environment {
     pub fn get(&mut self, name: String) -> Value {
         match self.values.get(&name) {
             Some(v) => v.clone(),
-            None => panic!("value with name '{}' not found", name),
+            None => panic!("undefined key '{name}'"),
         }
     }
 }
