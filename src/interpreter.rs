@@ -1,8 +1,10 @@
 use crate::ast::Stmt;
 use crate::ast::Expr;
 use crate::token::Token;
+use crate::environ::Environment;
+use std::mem;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Bool(bool),
     Int(i64),
@@ -11,43 +13,52 @@ pub enum Value {
 }
 
 pub struct Interpreter {
-    stmts: Vec<Stmt>
+    stmts: Vec<Stmt>,
+    environment: Environment,
 }
 
 impl Interpreter {
     pub fn new(stmts: Vec<Stmt>) -> Self {
         Interpreter {
             stmts: stmts,
+            environment: Environment::new(),
         }
     }
 
-    pub fn interpret(&self) {
-        for stmt in &self.stmts {
+    pub fn interpret(&mut self) {
+        // We do this so compiler won't complain about E0502
+        // (borrowing as mutable and immutable)
+        let stmts = mem::take(&mut self.stmts);
+        for stmt in &stmts {
             self.execute(stmt);
         }
+        println!("{:#?}", self.environment);
+        self.stmts = stmts;
     }
 
-    fn execute(&self, stmt: &Stmt) {
+    fn execute(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Expression(e) => {
                 let v = self.eval(e);
                 println!("{:#?}", v);
             },
+            Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
             _ => todo!(),
         }
     }
 
-    fn eval(&self, expression: &Expr) -> Value {
+    fn eval(&mut self, expression: &Expr) -> Value {
         match expression {
             Expr::Literal(v) => self.eval_literal(v),
             Expr::Unary(v, op) => self.eval_unary(v, op),
             Expr::Binary(left, op, right) => self.eval_binary(left, op, right),
             Expr::Grouping(exp) => self.eval(exp),
+            Expr::Variable(sym) => self.eval_variable(sym),
             _ => todo!()
         }
     }
 
-    fn eval_literal(&self, v: &Token) -> Value {
+    fn eval_literal(&mut self, v: &Token) -> Value {
         match v {
             Token::False => Value::Bool(false),
             Token::True => Value::Bool(true),
@@ -57,7 +68,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_number_literal(&self, nstring: &String) -> Value {
+    fn eval_number_literal(&mut self, nstring: &String) -> Value {
         let s = nstring.as_str();
         if let Ok(x) = s.parse::<i64>() {
             Value::Int(x)
@@ -68,12 +79,12 @@ impl Interpreter {
         }
     }
 
-    fn eval_string_literal(&self, string: &String) -> Value {
+    fn eval_string_literal(&mut self, string: &String) -> Value {
         let s = &string[1..string.len()-1]; // Remove trailing "
         Value::Str(s.to_string())
     }
 
-    fn eval_unary(&self, v: &Token, e: &Expr) -> Value {
+    fn eval_unary(&mut self, v: &Token, e: &Expr) -> Value {
         let value = self.eval(e);
         match v {
             Token::Minus => {
@@ -96,13 +107,13 @@ impl Interpreter {
         }
     }
 
-    fn eval_binary(&self, left: &Expr, op: &Token, right: &Expr) -> Value {
+    fn eval_binary(&mut self, left: &Expr, op: &Token, right: &Expr) -> Value {
         let left_value = self.eval(left);
         let right_value = self.eval(right);
         self.perform_op(left_value, op, right_value)
     }
 
-    fn perform_op(&self, left: Value, op: &Token, right: Value) -> Value {
+    fn perform_op(&mut self, left: Value, op: &Token, right: Value) -> Value {
         match (left, right) {
             (Value::Int(lv), Value::Int(rv)) => {
                 match op {
@@ -132,5 +143,26 @@ impl Interpreter {
             }
             _ => panic!("invalid types to operate on"),
         }
+    }
+
+    fn eval_variable(&mut self, sym_tk: &Token) -> Value {
+        let name = match sym_tk {
+            Token::Symbol(s) => s.clone(),
+            _ => panic!("expected symbol"),
+        };
+        self.environment.get(name)
+    }
+
+    // TODO: implement type checking
+    fn execute_let(&mut self, name_tk: &Token, _typ_tk: &Token, expr: &Expr) {
+        let name = match name_tk {
+            Token::Symbol(s) => s.clone(),
+            _ => panic!("expected symbol"),
+        };
+        let val = self.eval(expr);
+
+        // This function panics when name is already defined
+        // To redefine, we'd have a Environment::update function
+        self.environment.insert(name, val);
     }
 }

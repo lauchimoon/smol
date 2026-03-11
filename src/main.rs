@@ -9,7 +9,7 @@ fn main() {
     let source = read_file(&args[1]);
     let tokens = Lexer::new(source).lex();
     let mut parser = Parser::new(tokens);
-    let interpreter = Interpreter::new(parser.parse());
+    let mut interpreter = Interpreter::new(parser.parse());
     interpreter.interpret();
 }
 
