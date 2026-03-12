@@ -39,8 +39,12 @@ impl Interpreter {
     fn execute(&mut self, stmt: &Stmt) {
         match stmt {
             Stmt::Expression(e) => {
-                let v = self.eval(e);
-                println!("{:#?}", v);
+                if let Expr::Assignment(expr1, expr2) = e {
+                    self.execute_assignment(expr1, expr2);
+                } else {
+                    let v = self.eval(e);
+                    println!("{:#?}", v);
+                }
             },
             Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
             _ => todo!(),
@@ -151,6 +155,19 @@ impl Interpreter {
             _ => panic!("expected symbol"),
         };
         self.environment.get(name)
+    }
+
+    fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr) {
+        let rhs = self.eval(expr2);
+        if let Expr::Variable(name_tk) = expr1 {
+            let name = match name_tk {
+                Token::Symbol(s) => s.clone(),
+                _ => panic!("expected symbol"),
+            };
+            self.environment.update(name, rhs);
+        } else {
+            panic!("expected variable on lhs");
+        }
     }
 
     // TODO: implement type checking
