@@ -11,6 +11,7 @@ pub enum Value {
     Int(i64),
     Float(f64),
     Str(String),
+    FuncCall(String, Vec<Value>),
 }
 
 impl fmt::Display for Value {
@@ -20,6 +21,7 @@ impl fmt::Display for Value {
             Value::Int(x) => write!(f, "{x}"),
             Value::Float(x) => write!(f, "{x}"),
             Value::Str(x) => write!(f, "{x}"),
+            Value::FuncCall(name, args) => write!(f, "{name}: {:#?}", args),
         }
     }
 }
@@ -80,6 +82,7 @@ impl Interpreter {
             Expr::Grouping(exp) => self.eval(exp),
             Expr::Variable(sym) => self.eval_variable(sym),
             Expr::Logical(left, op, right) => self.eval_logical(left, op, right),
+            Expr::FuncCall(name, args) => self.eval_func_call(name, args),
             _ => todo!()
         }
     }
@@ -198,6 +201,24 @@ impl Interpreter {
             }
             _ => panic!("expected two boolean expressions to evaluate"),
         }
+    }
+
+    fn eval_func_call(&mut self, name: &Expr, args: &Vec<Expr>) -> Value {
+        let name_string = match name {
+            Expr::Variable(s) => {
+                match s {
+                    Token::Symbol(sym) => sym.clone(),
+                    _ => panic!("expected symbol for function name"),
+                }
+            },
+            _ => panic!("expected variable for function name"),
+        };
+        let mut arguments: Vec<Value> = Vec::new();
+        for arg in args {
+            arguments.push(self.eval(arg));
+        }
+
+        Value::FuncCall(name_string, arguments)
     }
 
     fn eval_variable(&mut self, sym_tk: &Token) -> Value {
