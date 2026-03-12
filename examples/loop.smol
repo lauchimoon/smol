@@ -12,9 +12,9 @@ fn main() void {
         }
     }
     print "gcd(";
-    print x;
+    print x0;
     print ", ";
-    print y;
-    print " = ";
+    print y0;
+    print ") = ";
     println x;
 }
