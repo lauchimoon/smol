@@ -24,6 +24,15 @@ impl fmt::Display for Value {
     }
 }
 
+impl Value {
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::Bool(x) => *x,
+            _ => panic!("expected bool expression"),
+        }
+    }
+}
+
 pub struct Interpreter {
     stmts: Vec<Stmt>,
     environment: Environment,
@@ -137,6 +146,10 @@ impl Interpreter {
                     Token::Mul => Value::Int(lv*rv),
                     Token::Div => Value::Int(lv/rv),
                     Token::Modulo => Value::Int(lv%rv),
+                    Token::Less => Value::Bool(lv < rv),
+                    Token::LessEq => Value::Bool(lv <= rv),
+                    Token::Greater => Value::Bool(lv > rv),
+                    Token::GreaterEq => Value::Bool(lv >= rv),
                     _ => panic!("unknown operator {:#?}", op),
                 }
             }
@@ -147,6 +160,10 @@ impl Interpreter {
                     Token::Mul => Value::Float(lv*rv),
                     Token::Div => Value::Float(lv/rv),
                     Token::Modulo => Value::Float(lv%rv),
+                    Token::Less => Value::Bool(lv < rv),
+                    Token::LessEq => Value::Bool(lv <= rv),
+                    Token::Greater => Value::Bool(lv > rv),
+                    Token::GreaterEq => Value::Bool(lv >= rv),
                     _ => panic!("unknown operator {:#?}", op),
                 }
             }
@@ -210,16 +227,12 @@ impl Interpreter {
     }
 
     fn execute_while(&mut self, cond: &Expr, block_stmt: &Stmt) {
-        let value = match self.eval(cond) {
-            Value::Bool(x) => x,
-            _ => panic!("expected boolean expression for while condition"),
-        };
-
         let block = match block_stmt {
             Stmt::Block(stmts) => stmts,
             _ => panic!("expected one or more statements inside while body"),
         };
-        while value {
+
+        while self.eval(cond).is_truthy() {
             self.execute_block(block);
         }
     }
