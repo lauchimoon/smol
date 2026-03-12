@@ -227,9 +227,6 @@ impl Interpreter {
             _ => panic!("expected symbol"),
         };
         let val = self.eval(expr);
-
-        // This function panics when name is already defined
-        // To redefine, we'd have a Environment::update function
         self.environment.insert(name, val);
     }
 
@@ -249,13 +246,8 @@ impl Interpreter {
     }
 
     fn execute_while(&mut self, cond: &Expr, block_stmt: &Stmt) {
-        let block = match block_stmt {
-            Stmt::Block(stmts) => stmts,
-            _ => panic!("expected one or more statements inside while body"),
-        };
-
         while self.eval(cond).is_truthy() {
-            self.execute_block(block);
+            self.execute(block_stmt);
         }
     }
 }
