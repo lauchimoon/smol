@@ -78,6 +78,7 @@ impl Interpreter {
             Expr::Binary(left, op, right) => self.eval_binary(left, op, right),
             Expr::Grouping(exp) => self.eval(exp),
             Expr::Variable(sym) => self.eval_variable(sym),
+            Expr::Logical(left, op, right) => self.eval_logical(left, op, right),
             _ => todo!()
         }
     }
@@ -150,6 +151,8 @@ impl Interpreter {
                     Token::LessEq => Value::Bool(lv <= rv),
                     Token::Greater => Value::Bool(lv > rv),
                     Token::GreaterEq => Value::Bool(lv >= rv),
+                    Token::Equals => Value::Bool(lv == rv),
+                    Token::NotEq => Value::Bool(lv != rv),
                     _ => panic!("unknown operator {:#?}", op),
                 }
             }
@@ -164,16 +167,35 @@ impl Interpreter {
                     Token::LessEq => Value::Bool(lv <= rv),
                     Token::Greater => Value::Bool(lv > rv),
                     Token::GreaterEq => Value::Bool(lv >= rv),
+                    Token::Equals => Value::Bool(lv == rv),
+                    Token::NotEq => Value::Bool(lv != rv),
                     _ => panic!("unknown operator {:#?}", op),
                 }
             }
             (Value::Str(lv), Value::Str(rv)) => {
                 match op {
                     Token::Plus => Value::Str(lv + &rv),
+                    Token::Equals => Value::Bool(lv == rv),
+                    Token::NotEq => Value::Bool(lv != rv),
                     _ => panic!("operator {:#?} not valid for string", op),
                 }
             }
             _ => panic!("invalid types to operate on"),
+        }
+    }
+
+    fn eval_logical(&mut self, left: &Expr, op: &Token, right: &Expr) -> Value {
+        let left_value = self.eval(left);
+        let right_value = self.eval(right);
+        match (left_value, right_value) {
+            (Value::Bool(lv), Value::Bool(rv)) => {
+                match op {
+                    Token::Or => Value::Bool(lv || rv),
+                    Token::And => Value::Bool(lv && rv),
+                    _ => panic!("operator {:#?} not valid for logical expression", op),
+                }
+            }
+            _ => panic!("expected two boolean expressions to evaluate"),
         }
     }
 
