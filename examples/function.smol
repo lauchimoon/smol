@@ -10,5 +10,6 @@ fn factorial(x: int) int {
 
 fn main() void {
     let x: int = 6;
-    printf("%d! = %d\n", x, factorial(x));
+    print "6! = ";
+    println factorial(x));
 }

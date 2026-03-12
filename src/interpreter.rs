@@ -3,6 +3,7 @@ use crate::ast::Expr;
 use crate::token::Token;
 use crate::environ::Environment;
 use std::mem;
+use std::fmt;
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -10,6 +11,17 @@ pub enum Value {
     Int(i64),
     Float(f64),
     Str(String),
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Bool(x) => write!(f, "{x}"),
+            Value::Int(x) => write!(f, "{x}"),
+            Value::Float(x) => write!(f, "{x}"),
+            Value::Str(x) => write!(f, "{x}"),
+        }
+    }
 }
 
 pub struct Interpreter {
@@ -32,7 +44,6 @@ impl Interpreter {
         for stmt in &stmts {
             self.execute(stmt);
         }
-        println!("{:#?}", self.environment);
         self.stmts = stmts;
     }
 
@@ -41,12 +52,10 @@ impl Interpreter {
             Stmt::Expression(e) => {
                 if let Expr::Assignment(expr1, expr2) = e {
                     self.execute_assignment(expr1, expr2);
-                } else {
-                    let v = self.eval(e);
-                    println!("{:#?}", v);
                 }
             },
             Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
+            Stmt::Print(expr, newline) => self.execute_print(expr, newline),
             _ => todo!(),
         }
     }
@@ -181,5 +190,14 @@ impl Interpreter {
         // This function panics when name is already defined
         // To redefine, we'd have a Environment::update function
         self.environment.insert(name, val);
+    }
+
+    fn execute_print(&mut self, expr: &Expr, newline: &bool) {
+        let value = self.eval(expr);
+        if *newline {
+            println!("{}", value);
+        } else {
+            print!("{}", value);
+        }
     }
 }

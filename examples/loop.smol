@@ -11,5 +11,10 @@ fn main() void {
             y = y - x;
         }
     }
-    printf("gcd(%d, %d) = %d\n", x0, y0, x);
+    print "gcd(";
+    print x;
+    print ", ";
+    print y;
+    print " = ";
+    println x;
 }

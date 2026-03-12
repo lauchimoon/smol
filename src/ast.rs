@@ -12,7 +12,8 @@ pub enum Expr {
     Logical(Box<Expr>, Token, Box<Expr>),
 }
 
-// stmt ::= return expr? ";" |
+// stmt ::= ("print" | "println") expr ";" |
+//          return expr? ";" |
 //          let symbol ":" type = expr ";" |
 //          while "(" expr ")" { stmt* } |
 //          if "(" expr ")" { stmt* } (else { stmt* })? |
@@ -21,6 +22,7 @@ pub enum Expr {
 //          expr-stmt
 #[derive(Debug)]
 pub enum Stmt {
+    Print(Expr, bool),
     Return(Option<Expr>),
     Let(Token, Token, Expr),
     While(Expr, Box<Stmt>),

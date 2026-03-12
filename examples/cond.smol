@@ -2,16 +2,16 @@ fn main() void {
     let x: int = 34;
     let y: int = -35;
     if (x >= 0 || y >= 0) {
-        printf("There is at least one nonnegative number.\n");
+        println "There is at least one nonnegative number.";
     } else if  (x < 0 && y < 0) {
-        printf("Both are negative numbers.\n");
+        println "Both are negative numbers.";
     } else if  (x == 0 || y == 0) {
-        printf("One of the numbers is 0.\n");
+        println "One of the numbers is 0.";
     } else {
-        printf("Unknown case.\n");
+        println "Unknown case.";
     }
 
     if (!false) {
-        printf("Always prints.\n");
+        println "Always printlns.";
     }
 }

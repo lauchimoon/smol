@@ -25,6 +25,14 @@ impl Parser {
             self.advance();
             return self.fn_stmt();
         }
+        if matches!(self.current(), Token::Print | Token::Println) {
+            let mut newline = false;
+            if matches!(self.current(), Token::Println) {
+                newline = true;
+            }
+            self.advance();
+            return self.print_stmt(newline);
+        }
         if matches!(self.current(), Token::Return) {
             self.advance();
             return self.return_stmt();
@@ -84,6 +92,12 @@ impl Parser {
         (name, typ)
     }
 
+    fn print_stmt(&mut self, newline: bool) -> Stmt {
+        let expr = self.expression();
+        self.consume_expected(Token::Semicolon, "print: expected ';'");
+        Stmt::Print(expr, newline)
+    }
+
     fn return_stmt(&mut self) -> Stmt {
         if matches!(self.current(), Token::Semicolon) {
             self.advance();
@@ -91,7 +105,7 @@ impl Parser {
         }
         let expr = self.expression();
         self.consume_expected(Token::Semicolon, "return: expected ';'");
-        return Stmt::Return(Some(expr));
+        Stmt::Return(Some(expr))
     }
 
     fn let_stmt(&mut self) -> Stmt {

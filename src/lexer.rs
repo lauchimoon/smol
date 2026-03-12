@@ -182,6 +182,8 @@ impl Lexer {
             "else" => Token::Else,
             "while" => Token::While,
             "return" => Token::Return,
+            "print" => Token::Print,
+            "println" => Token::Println,
             _ => Token::Symbol(value)
         }
     }

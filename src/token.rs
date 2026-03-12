@@ -46,6 +46,8 @@ pub enum Token {
     Else,
     While,
     Return,
+    Print,
+    Println,
 
     EOF,
     Unknown(String),
