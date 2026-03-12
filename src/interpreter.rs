@@ -67,6 +67,7 @@ impl Interpreter {
             Stmt::Print(expr, newline) => self.execute_print(expr, newline),
             Stmt::Block(stmts) => self.execute_block(stmts),
             Stmt::While(cond, block) => self.execute_while(cond, block),
+            Stmt::If(cond, then_branch, else_branch) => self.execute_if(cond, then_branch, else_branch),
             _ => todo!(),
         }
     }
@@ -245,9 +246,17 @@ impl Interpreter {
         }
     }
 
-    fn execute_while(&mut self, cond: &Expr, block_stmt: &Stmt) {
+    fn execute_while(&mut self, cond: &Expr, block: &Stmt) {
         while self.eval(cond).is_truthy() {
-            self.execute(block_stmt);
+            self.execute(block);
+        }
+    }
+
+    fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>) {
+        if self.eval(cond).is_truthy() {
+            self.execute(then_branch);
+        } else if let Some(els) = else_branch {
+            self.execute(els);
         }
     }
 }
