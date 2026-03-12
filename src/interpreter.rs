@@ -56,6 +56,8 @@ impl Interpreter {
             },
             Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
             Stmt::Print(expr, newline) => self.execute_print(expr, newline),
+            Stmt::Block(stmts) => self.execute_block(stmts),
+            Stmt::While(cond, block) => self.execute_while(cond, block),
             _ => todo!(),
         }
     }
@@ -198,6 +200,27 @@ impl Interpreter {
             println!("{}", value);
         } else {
             print!("{}", value);
+        }
+    }
+
+    fn execute_block(&mut self, block: &Vec<Stmt>) {
+        for stmt in block {
+            self.execute(stmt);
+        }
+    }
+
+    fn execute_while(&mut self, cond: &Expr, block_stmt: &Stmt) {
+        let value = match self.eval(cond) {
+            Value::Bool(x) => x,
+            _ => panic!("expected boolean expression for while condition"),
+        };
+
+        let block = match block_stmt {
+            Stmt::Block(stmts) => stmts,
+            _ => panic!("expected one or more statements inside while body"),
+        };
+        while value {
+            self.execute_block(block);
         }
     }
 }
