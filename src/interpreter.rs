@@ -86,7 +86,7 @@ impl Interpreter {
             Stmt::Block(stmts) => self.execute_block(stmts, environ),
             Stmt::While(cond, block) => self.execute_while(cond, block, environ),
             Stmt::If(cond, then_branch, else_branch) => self.execute_if(cond, then_branch, else_branch, environ),
-            Stmt::Func(name, params, ret_type, body) => self.execute_func(name, params, ret_type, body),
+            Stmt::Func(name, params, ret_type, body) => self.execute_func(name, params, ret_type, body, environ),
         }
     }
 
@@ -220,7 +220,7 @@ impl Interpreter {
     }
 
     fn eval_func_call(&mut self, name: &Expr, args: &Vec<Expr>, environ: &mut Environment) -> Value {
-        let mut env = Environment::from(environ);
+        let mut env = Environment::from(environ.clone());
         let name_string = match name {
             Expr::Variable(s) => {
                 match s {
@@ -231,7 +231,7 @@ impl Interpreter {
             _ => panic!("expected variable for function name"),
         };
 
-        let func = self.globals.get(name_string.clone());
+        let func = environ.get(name_string.clone());
         if let Value::Function(_, params, body) = func {
             let arity = params.len();
             if args.len() != arity {
@@ -249,7 +249,6 @@ impl Interpreter {
                 }
             }
 
-            // TODO: use internal globals and bindings for functions
             match self.execute(&body, &mut env) {
                 Err(ControlFlow::Return(v)) => v,
                 Ok(_) => Value::Bool(false),
@@ -325,13 +324,13 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt) -> Result<(), ControlFlow> {
+    fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
         let name_str = match name {
             Token::Symbol(s) => s.clone(),
             _ => panic!("expected symbol for function name"),
         };
         let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));
-        self.globals.insert(name_str, func);
+        environ.insert(name_str, func);
         Ok(())
     }
 }

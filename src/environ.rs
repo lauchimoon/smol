@@ -1,7 +1,7 @@
 use crate::interpreter::Value;
 use std::collections::HashMap;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Environment {
     values: HashMap<String, Value>
 }
