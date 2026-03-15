@@ -1,6 +1,6 @@
 use crate::token::Token;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Unary(Token, Box<Expr>),
@@ -20,7 +20,7 @@ pub enum Expr {
 //          "{" stmt* "}" |
 //          fn symbol "(" param ("," param)* ")" symbol { stmt* }, where param ::= symbol: symbol |
 //          expr-stmt
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Stmt {
     Print(Expr, bool),
     Return(Option<Expr>),

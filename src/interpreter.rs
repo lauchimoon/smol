@@ -11,7 +11,7 @@ pub enum Value {
     Int(i64),
     Float(f64),
     Str(String),
-    FuncCall(String, Vec<Value>),
+    Function(String, Vec<(Token, Token)>, Box<Stmt>),
 }
 
 impl fmt::Display for Value {
@@ -21,7 +21,7 @@ impl fmt::Display for Value {
             Value::Int(x) => write!(f, "{x}"),
             Value::Float(x) => write!(f, "{x}"),
             Value::Str(x) => write!(f, "{x}"),
-            Value::FuncCall(name, args) => write!(f, "{name}: {:#?}", args),
+            Value::Function(name, ..) => write!(f, "<fn {name}>"),
         }
     }
 }
@@ -64,12 +64,14 @@ impl Interpreter {
                 if let Expr::Assignment(expr1, expr2) = e {
                     self.execute_assignment(expr1, expr2);
                 }
+                self.eval(e);
             },
             Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
             Stmt::Print(expr, newline) => self.execute_print(expr, newline),
             Stmt::Block(stmts) => self.execute_block(stmts),
             Stmt::While(cond, block) => self.execute_while(cond, block),
             Stmt::If(cond, then_branch, else_branch) => self.execute_if(cond, then_branch, else_branch),
+            Stmt::Func(name, params, ret_type, body) => self.execute_func(name, params, ret_type, body),
             _ => todo!(),
         }
     }
@@ -213,12 +215,20 @@ impl Interpreter {
             },
             _ => panic!("expected variable for function name"),
         };
-        let mut arguments: Vec<Value> = Vec::new();
-        for arg in args {
-            arguments.push(self.eval(arg));
-        }
 
-        Value::FuncCall(name_string, arguments)
+        let func = self.environment.get(name_string.clone());
+        if let Value::Function(_, _, body) = func {
+            let mut arguments: Vec<Value> = Vec::new();
+            for arg in args {
+                arguments.push(self.eval(arg));
+            }
+
+            // TODO: use internal environment and bindings for functions
+            self.execute(&body);
+            Value::Bool(false)
+        } else {
+            panic!("{name_string} is not a function");
+        }
     }
 
     fn eval_variable(&mut self, sym_tk: &Token) -> Value {
@@ -279,5 +289,14 @@ impl Interpreter {
         } else if let Some(els) = else_branch {
             self.execute(els);
         }
+    }
+
+    fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt) {
+        let name_str = match name {
+            Token::Symbol(s) => s.clone(),
+            _ => panic!("expected symbol for function name"),
+        };
+        let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));
+        self.environment.insert(name_str, func);
     }
 }
