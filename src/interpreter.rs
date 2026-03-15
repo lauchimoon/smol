@@ -67,7 +67,7 @@ impl Interpreter {
         }
 
         let main_func = globals.get("main".to_string());
-        if let Value::Function(name, params, body) = main_func {
+        if let Value::Function(_, _, body) = main_func {
             let mut main_env = Environment::from(&globals);
             match self.execute(&body, &mut main_env) {
                 Err(ControlFlow::Return(_)) => (),
