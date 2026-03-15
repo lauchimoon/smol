@@ -237,7 +237,11 @@ impl Interpreter {
     }
 
     fn eval_func_call(&mut self, name: &Expr, args: &Vec<Expr>, environ: &mut Environment) -> Value {
-        let mut env = Environment::from(environ.clone());
+        let mut arguments: Vec<Value> = Vec::new();
+        for arg in args {
+            arguments.push(self.eval(arg, environ));
+        }
+
         let name_string = match name {
             Expr::Variable(s) => {
                 match s {
@@ -255,11 +259,7 @@ impl Interpreter {
                 panic!("expected {} arguments, got {}", arity, args.len());
             }
 
-            let mut arguments: Vec<Value> = Vec::new();
-            for arg in args {
-                arguments.push(self.eval(arg, &mut env));
-            }
-
+            let mut env = Environment::new();
             for (param, arg) in params.iter().zip(arguments.into_iter()) {
                 if let Token::Symbol(name) = &param.0 {
                     env.insert(name.clone(), arg);
