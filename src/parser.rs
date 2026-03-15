@@ -86,8 +86,8 @@ impl Parser {
         }
         self.consume_expected(Token::Colon, "fn parameter: expected ':'");
         let typ = self.consume().clone();
-        if !matches!(typ, Token::Symbol(_)) {
-            panic!("fn parameter: expected Symbol for typ, got {:#?}", typ);
+        if !matches!(typ, Token::Symbol(_) | Token::PrimitiveType(_)) {
+            panic!("fn parameter: expected Symbol or PrimitiveType for typ, got {:#?}", typ);
         }
         (name, typ)
     }
