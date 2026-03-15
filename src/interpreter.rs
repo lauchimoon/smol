@@ -14,6 +14,10 @@ pub enum Value {
     Function(String, Vec<(Token, Token)>, Box<Stmt>),
 }
 
+enum ControlFlow {
+    Return(Value),
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -53,18 +57,27 @@ impl Interpreter {
         // (borrowing as mutable and immutable)
         let stmts = mem::take(&mut self.stmts);
         for stmt in &stmts {
-            self.execute(stmt);
+            let _ = self.execute(stmt);
         }
         self.stmts = stmts;
     }
 
-    fn execute(&mut self, stmt: &Stmt) {
+    fn execute(&mut self, stmt: &Stmt) -> Result<(), ControlFlow> {
         match stmt {
+            Stmt::Return(expr) => {
+                let value = match expr {
+                    Some(e) => self.eval(e),
+                    None => Value::Bool(false),
+                };
+                return Err(ControlFlow::Return(value));
+            },
             Stmt::Expression(e) => {
                 if let Expr::Assignment(expr1, expr2) = e {
-                    self.execute_assignment(expr1, expr2);
+                    self.execute_assignment(expr1, expr2)
+                } else {
+                    self.eval(e);
+                    return Ok(());
                 }
-                self.eval(e);
             },
             Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
             Stmt::Print(expr, newline) => self.execute_print(expr, newline),
@@ -72,7 +85,6 @@ impl Interpreter {
             Stmt::While(cond, block) => self.execute_while(cond, block),
             Stmt::If(cond, then_branch, else_branch) => self.execute_if(cond, then_branch, else_branch),
             Stmt::Func(name, params, ret_type, body) => self.execute_func(name, params, ret_type, body),
-            _ => todo!(),
         }
     }
 
@@ -224,8 +236,10 @@ impl Interpreter {
             }
 
             // TODO: use internal environment and bindings for functions
-            self.execute(&body);
-            Value::Bool(false)
+            match self.execute(&body) {
+                Err(ControlFlow::Return(v)) => v,
+                Ok(_) => {println!("hello"); Value::Bool(false)},
+            }
         } else {
             panic!("{name_string} is not a function");
         }
@@ -239,7 +253,7 @@ impl Interpreter {
         self.environment.get(name)
     }
 
-    fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr) {
+    fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr) -> Result<(), ControlFlow> {
         let rhs = self.eval(expr2);
         if let Expr::Variable(name_tk) = expr1 {
             let name = match name_tk {
@@ -247,56 +261,63 @@ impl Interpreter {
                 _ => panic!("expected symbol"),
             };
             self.environment.update(name, rhs);
+            Ok(())
         } else {
             panic!("expected variable on lhs");
         }
     }
 
     // TODO: implement type checking
-    fn execute_let(&mut self, name_tk: &Token, _typ_tk: &Token, expr: &Expr) {
+    fn execute_let(&mut self, name_tk: &Token, _typ_tk: &Token, expr: &Expr) -> Result<(), ControlFlow> {
         let name = match name_tk {
             Token::Symbol(s) => s.clone(),
             _ => panic!("expected symbol"),
         };
         let val = self.eval(expr);
         self.environment.insert(name, val);
+        Ok(())
     }
 
-    fn execute_print(&mut self, expr: &Expr, newline: &bool) {
+    fn execute_print(&mut self, expr: &Expr, newline: &bool) -> Result<(), ControlFlow> {
         let value = self.eval(expr);
         if *newline {
             println!("{}", value);
         } else {
             print!("{}", value);
         }
+        Ok(())
     }
 
-    fn execute_block(&mut self, block: &Vec<Stmt>) {
+    fn execute_block(&mut self, block: &Vec<Stmt>) -> Result<(), ControlFlow> {
         for stmt in block {
-            self.execute(stmt);
+            self.execute(stmt)?;
         }
+        Ok(())
     }
 
-    fn execute_while(&mut self, cond: &Expr, block: &Stmt) {
+    fn execute_while(&mut self, cond: &Expr, block: &Stmt) -> Result<(), ControlFlow> {
         while self.eval(cond).is_truthy() {
-            self.execute(block);
+            self.execute(block)?;
         }
+        Ok(())
     }
 
-    fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>) {
+    fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>) -> Result<(), ControlFlow> {
         if self.eval(cond).is_truthy() {
-            self.execute(then_branch);
+            self.execute(then_branch)?;
         } else if let Some(els) = else_branch {
-            self.execute(els);
+            self.execute(els)?;
         }
+        Ok(())
     }
 
-    fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt) {
+    fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt) -> Result<(), ControlFlow> {
         let name_str = match name {
             Token::Symbol(s) => s.clone(),
             _ => panic!("expected symbol for function name"),
         };
         let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));
         self.environment.insert(name_str, func);
+        Ok(())
     }
 }
