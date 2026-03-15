@@ -184,6 +184,7 @@ impl Lexer {
             "return" => Token::Return,
             "print" => Token::Print,
             "println" => Token::Println,
+            "int" | "float" | "bool" | "string" | "void" => Token::PrimitiveType(value),
             _ => Token::Symbol(value)
         }
     }

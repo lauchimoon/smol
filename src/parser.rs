@@ -72,8 +72,8 @@ impl Parser {
         self.consume_expected(Token::CloseParen, "fn: expected ')'");
 
         let ret_type = self.consume().clone();
-        if !matches!(ret_type, Token::Symbol(_)) {
-            panic!("fn: expected Symbol for return type, got {:#?}", ret_type);
+        if !matches!(ret_type, Token::Symbol(_) | Token::PrimitiveType(_)) {
+            panic!("fn: expected Symbol or PrimitiveType for return type, got {:#?}", ret_type);
         }
         let body = Box::new(Stmt::Block(self.block()));
         Stmt::Func(name, params, ret_type, body)
@@ -115,8 +115,8 @@ impl Parser {
         }
         self.consume_expected(Token::Colon, "let: expected ':'");
         let typ = self.consume().clone();
-        if !matches!(typ, Token::Symbol(_)) {
-            panic!("let: expected Symbol, got {:#?}", typ);
+        if !matches!(typ, Token::Symbol(_) | Token::PrimitiveType(_)) {
+            panic!("let: expected Symbol or PrimitiveType, got {:#?}", typ);
         }
         self.consume_expected(Token::Equal, "let: expected '='");
         let value = self.expression();

@@ -14,11 +14,11 @@ pub enum Expr {
 
 // stmt ::= ("print" | "println") expr ";" |
 //          return expr? ";" |
-//          let symbol ":" type = expr ";" |
+//          let symbol ":" (symbol | PrimitiveType) = expr ";" |
 //          while "(" expr ")" { stmt* } |
 //          if "(" expr ")" { stmt* } (else { stmt* })? |
 //          "{" stmt* "}" |
-//          fn symbol "(" param ("," param)* ")" symbol { stmt* }, where param ::= symbol: symbol |
+//          fn symbol "(" param ("," param)* ")" (symbol | PrimitiveType) { stmt* }, where param ::= symbol: symbol |
 //          expr-stmt
 #[derive(Clone, Debug)]
 pub enum Stmt {

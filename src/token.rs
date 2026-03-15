@@ -44,6 +44,7 @@ pub enum Token {
     Return,
     Print,
     Println,
+    PrimitiveType(String),
 
     EOF,
     Unknown(String),
