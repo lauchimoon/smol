@@ -264,6 +264,11 @@ impl Interpreter {
             let mut env = Environment::new();
             for (param, arg) in params.iter().zip(arguments.into_iter()) {
                 if let Token::Symbol(name) = &param.0 {
+                    if let Token::PrimitiveType(param_name) = &param.1 {
+                        if param_name == "void" {
+                            panic!("type of parameter '{name}' cannot be void.");
+                        }
+                    }
                     env.insert(name.clone(), arg);
                 }
             }
@@ -300,11 +305,19 @@ impl Interpreter {
     }
 
     // TODO: implement type checking
-    fn execute_let(&mut self, name_tk: &Token, _typ_tk: &Token, expr: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
+    fn execute_let(&mut self, name_tk: &Token, typ_tk: &Token, expr: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
         let name = match name_tk {
             Token::Symbol(s) => s.clone(),
-            _ => panic!("expected symbol"),
+            _ => panic!("expected Symbol"),
         };
+        let typ = match typ_tk {
+            Token::Symbol(s) | Token::PrimitiveType(s) => s.clone(),
+            _ => panic!("expected Symbol or PrimitiveType"),
+        };
+        if typ == "void".to_string() {
+            panic!("type for let expression cannot be void.");
+        }
+
         let val = self.eval(expr, environ);
         environ.insert(name, val);
         Ok(())
