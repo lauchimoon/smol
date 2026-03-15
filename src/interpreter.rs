@@ -58,8 +58,25 @@ impl Interpreter {
         let stmts = mem::take(&mut self.stmts);
         let mut globals = mem::take(&mut self.globals);
         for stmt in &stmts {
-            let _ = self.execute(stmt, &mut globals);
+            match stmt {
+                Stmt::Func(..) | Stmt::Let(..) => {
+                    let _ = self.execute(stmt, &mut globals);
+                }
+                _ => panic!("expected function or variable declarations at top-level"),
+            }
         }
+
+        let main_func = globals.get("main".to_string());
+        if let Value::Function(name, params, body) = main_func {
+            let mut main_env = Environment::from(&globals);
+            match self.execute(&body, &mut main_env) {
+                Err(ControlFlow::Return(_)) => (),
+                Ok(_) => (),
+            }
+        } else {
+            panic!("no main function found");
+        }
+
         self.stmts = stmts;
         self.globals = globals;
     }
