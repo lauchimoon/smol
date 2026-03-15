@@ -233,6 +233,11 @@ impl Interpreter {
 
         let func = self.globals.get(name_string.clone());
         if let Value::Function(_, params, body) = func {
+            let arity = params.len();
+            if args.len() != arity {
+                panic!("expected {} arguments, got {}", arity, args.len());
+            }
+
             let mut arguments: Vec<Value> = Vec::new();
             for arg in args {
                 arguments.push(self.eval(arg, &mut env));
