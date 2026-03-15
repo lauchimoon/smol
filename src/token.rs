@@ -36,10 +36,6 @@ pub enum Token {
 
     Func,
     Let,
-    IntType,
-    FloatType,
-    StringType,
-    BoolType,
     False,
     True,
     If,
