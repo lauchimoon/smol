@@ -98,7 +98,7 @@ impl Interpreter {
             Expr::Grouping(exp) => self.eval(exp, environ),
             Expr::Variable(sym) => self.eval_variable(sym, environ),
             Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
-            Expr::FuncCall(name, args) => self.eval_func_call(name, args),
+            Expr::FuncCall(name, args) => self.eval_func_call(name, args, environ),
             _ => todo!()
         }
     }
@@ -219,8 +219,8 @@ impl Interpreter {
         }
     }
 
-    fn eval_func_call(&mut self, name: &Expr, args: &Vec<Expr>) -> Value {
-        let mut env = Environment::new();
+    fn eval_func_call(&mut self, name: &Expr, args: &Vec<Expr>, environ: &mut Environment) -> Value {
+        let mut env = Environment::from(environ);
         let name_string = match name {
             Expr::Variable(s) => {
                 match s {
@@ -232,10 +232,11 @@ impl Interpreter {
         };
 
         let func = self.globals.get(name_string.clone());
-        if let Value::Function(_, _, body) = func {
+        if let Value::Function(_, params, body) = func {
             let mut arguments: Vec<Value> = Vec::new();
             for arg in args {
-                arguments.push(self.eval(arg, &mut env));
+                let v = self.eval(arg, &mut env);
+                arguments.push(v);
             }
 
             // TODO: use internal globals and bindings for functions

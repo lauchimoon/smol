@@ -36,3 +36,19 @@ impl Environment {
         }
     }
 }
+
+impl From<&Environment> for Environment {
+    fn from(old: &Environment) -> Environment {
+        Environment {
+            values: old.values.clone(),
+        }
+    }
+}
+
+impl From<&mut Environment> for Environment {
+    fn from(old: &mut Environment) -> Environment {
+        Environment {
+            values: old.values.clone(),
+        }
+    }
+}
