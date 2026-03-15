@@ -11,5 +11,5 @@ fn factorial(x: int) int {
 fn main() void {
     let x: int = 6;
     print "6! = ";
-    println factorial(x));
+    println factorial(x);
 }

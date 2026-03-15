@@ -3,9 +3,9 @@ fn main() void {
     let y: int = -35;
     if (x >= 0 || y >= 0) {
         println "There is at least one nonnegative number.";
-    } else if  (x < 0 && y < 0) {
+    } else if (x < 0 && y < 0) {
         println "Both are negative numbers.";
-    } else if  (x == 0 || y == 0) {
+    } else if (x == 0 || y == 0) {
         println "One of the numbers is 0.";
     } else {
         println "Unknown case.";
