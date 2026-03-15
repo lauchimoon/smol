@@ -41,14 +41,14 @@ impl Value {
 
 pub struct Interpreter {
     stmts: Vec<Stmt>,
-    environment: Environment,
+    globals: Environment,
 }
 
 impl Interpreter {
     pub fn new(stmts: Vec<Stmt>) -> Self {
         Interpreter {
             stmts: stmts,
-            environment: Environment::new(),
+            globals: Environment::new(),
         }
     }
 
@@ -56,46 +56,48 @@ impl Interpreter {
         // We do this so compiler won't complain about E0502
         // (borrowing as mutable and immutable)
         let stmts = mem::take(&mut self.stmts);
+        let mut globals = mem::take(&mut self.globals);
         for stmt in &stmts {
-            let _ = self.execute(stmt);
+            let _ = self.execute(stmt, &mut globals);
         }
         self.stmts = stmts;
+        self.globals = globals;
     }
 
-    fn execute(&mut self, stmt: &Stmt) -> Result<(), ControlFlow> {
+    fn execute(&mut self, stmt: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
         match stmt {
             Stmt::Return(expr) => {
                 let value = match expr {
-                    Some(e) => self.eval(e),
+                    Some(e) => self.eval(e, environ),
                     None => Value::Bool(false),
                 };
                 return Err(ControlFlow::Return(value));
             },
             Stmt::Expression(e) => {
                 if let Expr::Assignment(expr1, expr2) = e {
-                    self.execute_assignment(expr1, expr2)
+                    self.execute_assignment(expr1, expr2, environ)
                 } else {
-                    self.eval(e);
+                    self.eval(e, environ);
                     return Ok(());
                 }
             },
-            Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr),
-            Stmt::Print(expr, newline) => self.execute_print(expr, newline),
-            Stmt::Block(stmts) => self.execute_block(stmts),
-            Stmt::While(cond, block) => self.execute_while(cond, block),
-            Stmt::If(cond, then_branch, else_branch) => self.execute_if(cond, then_branch, else_branch),
+            Stmt::Let(name, typ, expr) => self.execute_let(name, typ, expr, environ),
+            Stmt::Print(expr, newline) => self.execute_print(expr, newline, environ),
+            Stmt::Block(stmts) => self.execute_block(stmts, environ),
+            Stmt::While(cond, block) => self.execute_while(cond, block, environ),
+            Stmt::If(cond, then_branch, else_branch) => self.execute_if(cond, then_branch, else_branch, environ),
             Stmt::Func(name, params, ret_type, body) => self.execute_func(name, params, ret_type, body),
         }
     }
 
-    fn eval(&mut self, expression: &Expr) -> Value {
+    fn eval(&mut self, expression: &Expr, environ: &mut Environment) -> Value {
         match expression {
             Expr::Literal(v) => self.eval_literal(v),
-            Expr::Unary(v, op) => self.eval_unary(v, op),
-            Expr::Binary(left, op, right) => self.eval_binary(left, op, right),
-            Expr::Grouping(exp) => self.eval(exp),
-            Expr::Variable(sym) => self.eval_variable(sym),
-            Expr::Logical(left, op, right) => self.eval_logical(left, op, right),
+            Expr::Unary(v, op) => self.eval_unary(v, op, environ),
+            Expr::Binary(left, op, right) => self.eval_binary(left, op, right, environ),
+            Expr::Grouping(exp) => self.eval(exp, environ),
+            Expr::Variable(sym) => self.eval_variable(sym, environ),
+            Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
             Expr::FuncCall(name, args) => self.eval_func_call(name, args),
             _ => todo!()
         }
@@ -127,8 +129,8 @@ impl Interpreter {
         Value::Str(s.to_string())
     }
 
-    fn eval_unary(&mut self, v: &Token, e: &Expr) -> Value {
-        let value = self.eval(e);
+    fn eval_unary(&mut self, v: &Token, e: &Expr, environ: &mut Environment) -> Value {
+        let value = self.eval(e, environ);
         match v {
             Token::Minus => {
                 if let Value::Int(i) = value {
@@ -150,9 +152,9 @@ impl Interpreter {
         }
     }
 
-    fn eval_binary(&mut self, left: &Expr, op: &Token, right: &Expr) -> Value {
-        let left_value = self.eval(left);
-        let right_value = self.eval(right);
+    fn eval_binary(&mut self, left: &Expr, op: &Token, right: &Expr, environ: &mut Environment) -> Value {
+        let left_value = self.eval(left, environ);
+        let right_value = self.eval(right, environ);
         self.perform_op(left_value, op, right_value)
     }
 
@@ -202,9 +204,9 @@ impl Interpreter {
         }
     }
 
-    fn eval_logical(&mut self, left: &Expr, op: &Token, right: &Expr) -> Value {
-        let left_value = self.eval(left);
-        let right_value = self.eval(right);
+    fn eval_logical(&mut self, left: &Expr, op: &Token, right: &Expr, environ: &mut Environment) -> Value {
+        let left_value = self.eval(left, environ);
+        let right_value = self.eval(right, environ);
         match (left_value, right_value) {
             (Value::Bool(lv), Value::Bool(rv)) => {
                 match op {
@@ -218,6 +220,7 @@ impl Interpreter {
     }
 
     fn eval_func_call(&mut self, name: &Expr, args: &Vec<Expr>) -> Value {
+        let mut env = Environment::new();
         let name_string = match name {
             Expr::Variable(s) => {
                 match s {
@@ -228,39 +231,39 @@ impl Interpreter {
             _ => panic!("expected variable for function name"),
         };
 
-        let func = self.environment.get(name_string.clone());
+        let func = self.globals.get(name_string.clone());
         if let Value::Function(_, _, body) = func {
             let mut arguments: Vec<Value> = Vec::new();
             for arg in args {
-                arguments.push(self.eval(arg));
+                arguments.push(self.eval(arg, &mut env));
             }
 
-            // TODO: use internal environment and bindings for functions
-            match self.execute(&body) {
+            // TODO: use internal globals and bindings for functions
+            match self.execute(&body, &mut env) {
                 Err(ControlFlow::Return(v)) => v,
-                Ok(_) => {println!("hello"); Value::Bool(false)},
+                Ok(_) => Value::Bool(false),
             }
         } else {
             panic!("{name_string} is not a function");
         }
     }
 
-    fn eval_variable(&mut self, sym_tk: &Token) -> Value {
+    fn eval_variable(&mut self, sym_tk: &Token, environ: &mut Environment) -> Value {
         let name = match sym_tk {
             Token::Symbol(s) => s.clone(),
             _ => panic!("expected symbol"),
         };
-        self.environment.get(name)
+        environ.get(name)
     }
 
-    fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr) -> Result<(), ControlFlow> {
-        let rhs = self.eval(expr2);
+    fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
+        let rhs = self.eval(expr2, environ);
         if let Expr::Variable(name_tk) = expr1 {
             let name = match name_tk {
                 Token::Symbol(s) => s.clone(),
                 _ => panic!("expected symbol"),
             };
-            self.environment.update(name, rhs);
+            environ.update(name, rhs);
             Ok(())
         } else {
             panic!("expected variable on lhs");
@@ -268,18 +271,18 @@ impl Interpreter {
     }
 
     // TODO: implement type checking
-    fn execute_let(&mut self, name_tk: &Token, _typ_tk: &Token, expr: &Expr) -> Result<(), ControlFlow> {
+    fn execute_let(&mut self, name_tk: &Token, _typ_tk: &Token, expr: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
         let name = match name_tk {
             Token::Symbol(s) => s.clone(),
             _ => panic!("expected symbol"),
         };
-        let val = self.eval(expr);
-        self.environment.insert(name, val);
+        let val = self.eval(expr, environ);
+        environ.insert(name, val);
         Ok(())
     }
 
-    fn execute_print(&mut self, expr: &Expr, newline: &bool) -> Result<(), ControlFlow> {
-        let value = self.eval(expr);
+    fn execute_print(&mut self, expr: &Expr, newline: &bool, environ: &mut Environment) -> Result<(), ControlFlow> {
+        let value = self.eval(expr, environ);
         if *newline {
             println!("{}", value);
         } else {
@@ -288,25 +291,25 @@ impl Interpreter {
         Ok(())
     }
 
-    fn execute_block(&mut self, block: &Vec<Stmt>) -> Result<(), ControlFlow> {
+    fn execute_block(&mut self, block: &Vec<Stmt>, environ: &mut Environment) -> Result<(), ControlFlow> {
         for stmt in block {
-            self.execute(stmt)?;
+            self.execute(stmt, environ)?;
         }
         Ok(())
     }
 
-    fn execute_while(&mut self, cond: &Expr, block: &Stmt) -> Result<(), ControlFlow> {
-        while self.eval(cond).is_truthy() {
-            self.execute(block)?;
+    fn execute_while(&mut self, cond: &Expr, block: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
+        while self.eval(cond, environ).is_truthy() {
+            self.execute(block, environ)?;
         }
         Ok(())
     }
 
-    fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>) -> Result<(), ControlFlow> {
-        if self.eval(cond).is_truthy() {
-            self.execute(then_branch)?;
+    fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>, environ: &mut Environment) -> Result<(), ControlFlow> {
+        if self.eval(cond, environ).is_truthy() {
+            self.execute(then_branch, environ)?;
         } else if let Some(els) = else_branch {
-            self.execute(els)?;
+            self.execute(els, environ)?;
         }
         Ok(())
     }
@@ -317,7 +320,7 @@ impl Interpreter {
             _ => panic!("expected symbol for function name"),
         };
         let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));
-        self.environment.insert(name_str, func);
+        self.globals.insert(name_str, func);
         Ok(())
     }
 }
