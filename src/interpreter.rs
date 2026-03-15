@@ -7,6 +7,7 @@ use std::fmt;
 
 #[derive(Clone, Debug)]
 pub enum Value {
+    Nil,
     Bool(bool),
     Int(i64),
     Float(f64),
@@ -21,6 +22,7 @@ enum ControlFlow {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Value::Nil => write!(f, "nil"),
             Value::Bool(x) => write!(f, "{x}"),
             Value::Int(x) => write!(f, "{x}"),
             Value::Float(x) => write!(f, "{x}"),
@@ -86,7 +88,7 @@ impl Interpreter {
             Stmt::Return(expr) => {
                 let value = match expr {
                     Some(e) => self.eval(e, environ),
-                    None => Value::Bool(false),
+                    None => Value::Nil,
                 };
                 return Err(ControlFlow::Return(value));
             },
@@ -268,7 +270,7 @@ impl Interpreter {
 
             match self.execute(&body, &mut env) {
                 Err(ControlFlow::Return(v)) => v,
-                Ok(_) => Value::Bool(false),
+                Ok(_) => Value::Nil,
             }
         } else {
             panic!("{name_string} is not a function");
