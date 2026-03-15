@@ -235,8 +235,13 @@ impl Interpreter {
         if let Value::Function(_, params, body) = func {
             let mut arguments: Vec<Value> = Vec::new();
             for arg in args {
-                let v = self.eval(arg, &mut env);
-                arguments.push(v);
+                arguments.push(self.eval(arg, &mut env));
+            }
+
+            for (param, arg) in params.iter().zip(arguments.into_iter()) {
+                if let Token::Symbol(name) = &param.0 {
+                    env.insert(name.clone(), arg);
+                }
             }
 
             // TODO: use internal globals and bindings for functions
