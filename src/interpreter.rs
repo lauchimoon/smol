@@ -1,6 +1,7 @@
 use crate::ast::Stmt;
 use crate::ast::Expr;
 use crate::token::Token;
+use crate::token::TokenKind;
 use crate::environ::Environment;
 use std::mem;
 use std::fmt;
@@ -123,11 +124,11 @@ impl Interpreter {
     }
 
     fn eval_literal(&mut self, v: &Token) -> Value {
-        match v {
-            Token::False => Value::Bool(false),
-            Token::True => Value::Bool(true),
-            Token::Number(n) => self.eval_number_literal(n),
-            Token::Str(s) => self.eval_string_literal(s),
+        match &v.kind {
+            TokenKind::False => Value::Bool(false),
+            TokenKind::True => Value::Bool(true),
+            TokenKind::Number(n) => self.eval_number_literal(&n),
+            TokenKind::Str(s) => self.eval_string_literal(&s),
             _ => todo!(),
         }
     }
@@ -150,8 +151,8 @@ impl Interpreter {
 
     fn eval_unary(&mut self, v: &Token, e: &Expr, environ: &mut Environment) -> Value {
         let value = self.eval(e, environ);
-        match v {
-            Token::Minus => {
+        match v.kind {
+            TokenKind::Minus => {
                 if let Value::Int(i) = value {
                     return Value::Int(-i);
                 } else if let Value::Float(f) = value {
@@ -160,7 +161,7 @@ impl Interpreter {
                     panic!("invalid number type to negate: {:#?}", value);
                 }
             }
-            Token::Not => {
+            TokenKind::Not => {
                 if let Value::Bool(x) = value {
                     return Value::Bool(!x);
                 } else {
@@ -180,42 +181,42 @@ impl Interpreter {
     fn perform_op(&mut self, left: Value, op: &Token, right: Value) -> Value {
         match (left, right) {
             (Value::Int(lv), Value::Int(rv)) => {
-                match op {
-                    Token::Plus => Value::Int(lv + rv),
-                    Token::Minus => Value::Int(lv - rv),
-                    Token::Mul => Value::Int(lv*rv),
-                    Token::Div => Value::Int(lv/rv),
-                    Token::Modulo => Value::Int(lv%rv),
-                    Token::Less => Value::Bool(lv < rv),
-                    Token::LessEq => Value::Bool(lv <= rv),
-                    Token::Greater => Value::Bool(lv > rv),
-                    Token::GreaterEq => Value::Bool(lv >= rv),
-                    Token::Equals => Value::Bool(lv == rv),
-                    Token::NotEq => Value::Bool(lv != rv),
+                match op.kind {
+                    TokenKind::Plus => Value::Int(lv + rv),
+                    TokenKind::Minus => Value::Int(lv - rv),
+                    TokenKind::Mul => Value::Int(lv*rv),
+                    TokenKind::Div => Value::Int(lv/rv),
+                    TokenKind::Modulo => Value::Int(lv%rv),
+                    TokenKind::Less => Value::Bool(lv < rv),
+                    TokenKind::LessEq => Value::Bool(lv <= rv),
+                    TokenKind::Greater => Value::Bool(lv > rv),
+                    TokenKind::GreaterEq => Value::Bool(lv >= rv),
+                    TokenKind::Equals => Value::Bool(lv == rv),
+                    TokenKind::NotEq => Value::Bool(lv != rv),
                     _ => panic!("unknown operator {:#?}", op),
                 }
             }
             (Value::Float(lv), Value::Float(rv)) => {
-                match op {
-                    Token::Plus => Value::Float(lv + rv),
-                    Token::Minus => Value::Float(lv - rv),
-                    Token::Mul => Value::Float(lv*rv),
-                    Token::Div => Value::Float(lv/rv),
-                    Token::Modulo => Value::Float(lv%rv),
-                    Token::Less => Value::Bool(lv < rv),
-                    Token::LessEq => Value::Bool(lv <= rv),
-                    Token::Greater => Value::Bool(lv > rv),
-                    Token::GreaterEq => Value::Bool(lv >= rv),
-                    Token::Equals => Value::Bool(lv == rv),
-                    Token::NotEq => Value::Bool(lv != rv),
+                match op.kind {
+                    TokenKind::Plus => Value::Float(lv + rv),
+                    TokenKind::Minus => Value::Float(lv - rv),
+                    TokenKind::Mul => Value::Float(lv*rv),
+                    TokenKind::Div => Value::Float(lv/rv),
+                    TokenKind::Modulo => Value::Float(lv%rv),
+                    TokenKind::Less => Value::Bool(lv < rv),
+                    TokenKind::LessEq => Value::Bool(lv <= rv),
+                    TokenKind::Greater => Value::Bool(lv > rv),
+                    TokenKind::GreaterEq => Value::Bool(lv >= rv),
+                    TokenKind::Equals => Value::Bool(lv == rv),
+                    TokenKind::NotEq => Value::Bool(lv != rv),
                     _ => panic!("unknown operator {:#?}", op),
                 }
             }
             (Value::Str(lv), Value::Str(rv)) => {
-                match op {
-                    Token::Plus => Value::Str(lv + &rv),
-                    Token::Equals => Value::Bool(lv == rv),
-                    Token::NotEq => Value::Bool(lv != rv),
+                match op.kind {
+                    TokenKind::Plus => Value::Str(lv + &rv),
+                    TokenKind::Equals => Value::Bool(lv == rv),
+                    TokenKind::NotEq => Value::Bool(lv != rv),
                     _ => panic!("operator {:#?} not valid for string", op),
                 }
             }
@@ -228,9 +229,9 @@ impl Interpreter {
         let right_value = self.eval(right, environ);
         match (left_value, right_value) {
             (Value::Bool(lv), Value::Bool(rv)) => {
-                match op {
-                    Token::Or => Value::Bool(lv || rv),
-                    Token::And => Value::Bool(lv && rv),
+                match op.kind {
+                    TokenKind::Or => Value::Bool(lv || rv),
+                    TokenKind::And => Value::Bool(lv && rv),
                     _ => panic!("operator {:#?} not valid for logical expression", op),
                 }
             }
@@ -246,8 +247,8 @@ impl Interpreter {
 
         let name_string = match name {
             Expr::Variable(s) => {
-                match s {
-                    Token::Symbol(sym) => sym.clone(),
+                match &s.kind {
+                    TokenKind::Symbol(sym) => sym.clone(),
                     _ => panic!("expected symbol for function name"),
                 }
             },
@@ -263,8 +264,8 @@ impl Interpreter {
 
             let mut env = Environment::new();
             for (param, arg) in params.iter().zip(arguments.into_iter()) {
-                if let Token::Symbol(name) = &param.0 {
-                    if let Token::PrimitiveType(param_name) = &param.1 {
+                if let TokenKind::Symbol(name) = &param.0.kind {
+                    if let TokenKind::PrimitiveType(param_name) = &param.1.kind {
                         if param_name == "void" {
                             panic!("type of parameter '{name}' cannot be void.");
                         }
@@ -283,8 +284,8 @@ impl Interpreter {
     }
 
     fn eval_variable(&mut self, sym_tk: &Token, environ: &mut Environment) -> Value {
-        let name = match sym_tk {
-            Token::Symbol(s) => s.clone(),
+        let name = match &sym_tk.kind {
+            TokenKind::Symbol(s) => s.clone(),
             _ => panic!("expected symbol"),
         };
         environ.get(name)
@@ -293,8 +294,8 @@ impl Interpreter {
     fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
         let rhs = self.eval(expr2, environ);
         if let Expr::Variable(name_tk) = expr1 {
-            let name = match name_tk {
-                Token::Symbol(s) => s.clone(),
+            let name = match &name_tk.kind {
+                TokenKind::Symbol(s) => s.clone(),
                 _ => panic!("expected symbol"),
             };
             environ.update(name, rhs);
@@ -306,12 +307,12 @@ impl Interpreter {
 
     // TODO: implement type checking
     fn execute_let(&mut self, name_tk: &Token, typ_tk: &Token, expr: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
-        let name = match name_tk {
-            Token::Symbol(s) => s.clone(),
+        let name = match &name_tk.kind {
+            TokenKind::Symbol(s) => s.clone(),
             _ => panic!("expected Symbol"),
         };
-        let typ = match typ_tk {
-            Token::Symbol(s) | Token::PrimitiveType(s) => s.clone(),
+        let typ = match &typ_tk.kind {
+            TokenKind::Symbol(s) | TokenKind::PrimitiveType(s) => s.clone(),
             _ => panic!("expected Symbol or PrimitiveType"),
         };
         if typ == "void".to_string() {
@@ -357,8 +358,8 @@ impl Interpreter {
     }
 
     fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
-        let name_str = match name {
-            Token::Symbol(s) => s.clone(),
+        let name_str = match &name.kind {
+            TokenKind::Symbol(s) => s.clone(),
             _ => panic!("expected symbol for function name"),
         };
         let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));

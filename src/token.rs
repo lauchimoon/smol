@@ -1,5 +1,5 @@
 #[derive(Clone, Debug, PartialEq)]
-pub enum Token {
+pub enum TokenKind {
     OpenParen,
     CloseParen,
     OpenCurly,
@@ -48,4 +48,10 @@ pub enum Token {
 
     EOF,
     Unknown(String),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub pos: (usize, usize),
 }
