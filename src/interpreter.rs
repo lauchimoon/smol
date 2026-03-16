@@ -3,6 +3,7 @@ use crate::ast::Expr;
 use crate::token::Token;
 use crate::token::TokenKind;
 use crate::environ::Environment;
+use crate::format;
 use std::mem;
 use std::fmt;
 use std::process;
@@ -78,8 +79,7 @@ impl Interpreter {
         }
 
         if !globals.exists("main".to_string()) {
-            println!("error: 'main' function not found");
-            process::exit(1);
+            error(format!("'{}' function not found", format::bold("main")).as_str());
         }
 
         let main_func = globals.get("main".to_string());
@@ -87,8 +87,7 @@ impl Interpreter {
             let mut main_env = Environment::from(&globals);
             let _ = self.execute(&body, &mut main_env);
         } else {
-            println!("error: found 'main', but it's not a function");
-            process::exit(1);
+            error(format!("found '{}', but it's not a function", format::bold("main")).as_str());
         }
 
         self.stmts = stmts;
@@ -299,15 +298,15 @@ impl Interpreter {
         };
 
         if !environ.exists(name_string.clone()) {
-            semantic_error(format!("undefined function '{name_string}'").as_str(), name.token());
+            semantic_error(format!("undefined function '{}'", format::bold(name_string.as_str())).as_str(), name.token());
         }
         let func = environ.get(name_string.clone());
         if let Value::Function(_, params, body) = func {
             let arity = params.len();
             if args.len() < arity {
-                semantic_error(format!("too few arguments to function '{name_string}'. expected {}, have {}", arity, args.len()).as_str(), name.token());
+                semantic_error(format!("too few arguments to function '{}'. expected {}, have {}", format::bold(name_string.as_str()), arity, args.len()).as_str(), name.token());
             } else if args.len() > arity {
-                semantic_error(format!("too many arguments to function '{name_string}'. expected {}, have {}", arity, args.len()).as_str(), name.token());
+                semantic_error(format!("too many arguments to function '{}'. expected {}, have {}", format::bold(name_string.as_str()), arity, args.len()).as_str(), name.token());
             }
 
             let mut env = Environment::new();
@@ -315,7 +314,7 @@ impl Interpreter {
                 if let TokenKind::Symbol(param_name) = &param.0.kind {
                     if let TokenKind::PrimitiveType(param_type) = &param.1.kind {
                         if param_type == "void" {
-                            semantic_error(format!("type of parameter '{param_name}' cannot be void.").as_str(), &param.0);
+                            semantic_error(format!("type of parameter '{}' cannot be void.", format::bold(param_name.as_str())).as_str(), &param.0);
                         }
                     }
                     env.insert(param_name.clone(), arg);
@@ -327,7 +326,7 @@ impl Interpreter {
                 Ok(_) => Value::Nil,
             }
         } else {
-            semantic_error(format!("'{name_string}' is not a function").as_str(), name.token());
+            semantic_error(format!("'{}' is not a function", format::bold(name_string.as_str())).as_str(), name.token());
             unreachable!()
         }
     }
@@ -339,7 +338,7 @@ impl Interpreter {
         };
 
         if !environ.exists(name.clone()) {
-            semantic_error(format!("undefined variable '{name}'").as_str(), sym_tk);
+            semantic_error(format!("undefined variable '{}'", format::bold(name.as_str())).as_str(), sym_tk);
         }
         environ.get(name)
     }
@@ -370,12 +369,12 @@ impl Interpreter {
             _ => unreachable!(),
         };
         if typ == "void".to_string() {
-            semantic_error(format!("type of '{name}' cannot be void").as_str(), typ_tk);
+            semantic_error(format!("type of '{}' cannot be void", format::bold(name.as_str())).as_str(), typ_tk);
         }
 
         let val = self.eval(expr, environ);
         if environ.exists(name.clone()) {
-            semantic_error(format!("redefinition of '{name}'").as_str(), name_tk);
+            semantic_error(format!("redefinition of variable '{}'", format::bold(name.as_str())).as_str(), name_tk);
         }
         environ.insert(name, val);
         Ok(())
@@ -436,7 +435,7 @@ impl Interpreter {
         let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));
 
         if environ.exists(name_str.clone()) {
-            semantic_error(format!("function '{name_str}' is being redefined").as_str(), name);
+            semantic_error(format!("redefinition of function '{}'", format::bold(name_str.as_str())).as_str(), name);
             unreachable!()
         }
         environ.insert(name_str, func);
@@ -444,7 +443,12 @@ impl Interpreter {
     }
 }
 
+fn error(msg: &str) {
+    eprintln!("{}: {msg}", format::error("error"));
+    process::exit(1);
+}
+
 fn semantic_error(msg: &str, token: &Token) {
-    println!("{}:{}:{}: error: {msg}", token.origin_file, token.pos.0, token.pos.1);
+    eprintln!("{}:{}:{}: {}: {msg}", token.origin_file, token.pos.0, token.pos.1, format::error("error"));
     process::exit(1);
 }

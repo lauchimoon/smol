@@ -2,6 +2,7 @@ use crate::token::Token;
 use crate::token::TokenKind;
 use crate::ast::Expr;
 use crate::ast::Stmt;
+use crate::format;
 use std::process;
 
 pub struct Parser {
@@ -349,11 +350,11 @@ impl Parser {
 }
 
 fn syntax_error(expected: &str, token: &Token) {
-    println!("{}:{}:{}: error: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1);
+    eprintln!("{}:{}:{}: {}: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1, format::error("error"));
     process::exit(1);
 }
 
 fn die(msg: &str, token: &Token) {
-    println!("{}:{}:{} error: {}", token.origin_file, token.pos.0, token.pos.1, msg);
+    eprintln!("{}:{}:{} {}: {msg}", token.origin_file, token.pos.0, token.pos.1, format::error("error"));
     process::exit(1);
 }
