@@ -398,17 +398,20 @@ impl Interpreter {
     }
 
     fn execute_while(&mut self, cond: &Expr, block: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
-        let condition = match self.eval(cond, environ) {
+        while self.eval_bool(cond, environ) {
+            self.execute(block, environ)?;
+        }
+        Ok(())
+    }
+
+    fn eval_bool(&mut self, cond: &Expr, environ: &mut Environment) -> bool {
+        match self.eval(cond, environ) {
             Value::Bool(x) => x,
             _ => {
                 semantic_error("expected boolean expression", cond.token());
                 unreachable!()
             }
-        };
-        while condition {
-            self.execute(block, environ)?;
         }
-        Ok(())
     }
 
     fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>, environ: &mut Environment) -> Result<(), ControlFlow> {
