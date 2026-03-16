@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     OpenParen,
@@ -54,4 +56,55 @@ pub enum TokenKind {
 pub struct Token {
     pub kind: TokenKind,
     pub pos: (usize, usize),
+    pub origin_file: String,
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.kind {
+            TokenKind::OpenParen => write!(f, "("),
+            TokenKind::CloseParen => write!(f, ")"),
+            TokenKind::OpenCurly => write!(f, "{{"),
+            TokenKind::CloseCurly => write!(f, "}}"),
+            TokenKind::Comma => write!(f, ","),
+            TokenKind::Semicolon => write!(f, ";"),
+            TokenKind::Colon => write!(f, ":"),
+            TokenKind::Equal => write!(f, "="),
+            TokenKind::Plus => write!(f, "+"),
+            TokenKind::Minus => write!(f, "-"),
+            TokenKind::Mul => write!(f, "*"),
+            TokenKind::Div => write!(f, "/"),
+            TokenKind::Modulo => write!(f, "%"),
+            TokenKind::PlusEq => write!(f, "+="),
+            TokenKind::MinusEq => write!(f, "-="),
+            TokenKind::MulEq => write!(f, "*="),
+            TokenKind::DivEq => write!(f, "/="),
+            TokenKind::ModuloEq => write!(f, "%="),
+            TokenKind::Equals => write!(f, "=="),
+            TokenKind::Less => write!(f, "<"),
+            TokenKind::LessEq => write!(f, "<="),
+            TokenKind::Greater => write!(f, ">"),
+            TokenKind::GreaterEq => write!(f, ">="),
+            TokenKind::And => write!(f, "&&"),
+            TokenKind::Or => write!(f, "||"),
+            TokenKind::Not => write!(f, "!"),
+            TokenKind::NotEq => write!(f, "!="),
+            TokenKind::Symbol(s) => write!(f, "symbol '{s}'"),
+            TokenKind::Str(s) => write!(f, "string {s}"),
+            TokenKind::Number(n) => write!(f, "number {n}"),
+            TokenKind::Func => write!(f, "keyword 'fn'"),
+            TokenKind::Let => write!(f, "keyword 'let'"),
+            TokenKind::False => write!(f, "keyword 'false'"),
+            TokenKind::True => write!(f, "keyword 'true'"),
+            TokenKind::If => write!(f, "keyword 'if'"),
+            TokenKind::Else => write!(f, "keyword 'else'"),
+            TokenKind::While => write!(f, "keyword 'while'"),
+            TokenKind::Return => write!(f, "keyword 'return'"),
+            TokenKind::Print => write!(f, "keyword 'print'"),
+            TokenKind::Println => write!(f, "keyword 'println'"),
+            TokenKind::PrimitiveType(typ) => write!(f, "keyword '{typ}'"),
+            TokenKind::EOF => write!(f, "EOF"),
+            TokenKind::Unknown(s) => write!(f, "unknown '{s}'"),
+        }
+    }
 }

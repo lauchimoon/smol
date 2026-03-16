@@ -3,6 +3,7 @@ use crate::token::TokenKind;
 
 #[derive(Debug)]
 pub struct Lexer {
+    filename: String,
     source: Vec<char>,
     cursor: usize,
     line: usize,
@@ -11,8 +12,9 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(source: String) -> Self {
+    pub fn new(filename: &str, source: String) -> Self {
         Lexer {
+            filename: filename.to_string(),
             source: source.chars().collect(),
             cursor: 0usize,
             line: 1usize,
@@ -35,7 +37,7 @@ impl Lexer {
                     c = self.chop();
                 }
                 let tok = self.identify_symbol_or_keyword(value);
-                tokens.push(Token {kind: tok, pos: (self.line, start)});
+                tokens.push(Token {origin_file: self.filename.clone(), kind: tok, pos: (self.line, start)});
             }
 
             if c.is_digit(10) {
@@ -47,7 +49,7 @@ impl Lexer {
                     value.push(c);
                     c = self.chop();
                 }
-                tokens.push(Token {kind: TokenKind::Number(value), pos: (self.line, start)});
+                tokens.push(Token {origin_file: self.filename.clone(), kind: TokenKind::Number(value), pos: (self.line, start)});
             }
 
             if c == '"' {
@@ -59,7 +61,7 @@ impl Lexer {
                     c = self.chop();
                 }
                 value.push(c);
-                tokens.push(Token {kind: TokenKind::Str(value), pos: (self.line, start)});
+                tokens.push(Token {origin_file: self.filename.clone(), kind: TokenKind::Str(value), pos: (self.line, start)});
                 continue;
             }
 
@@ -168,7 +170,7 @@ impl Lexer {
     }
 
     fn token(&self, kind: TokenKind) -> Token {
-        Token {kind: kind, pos: (self.line, self.chr)}
+        Token {origin_file: self.filename.clone(), kind: kind, pos: (self.line, self.chr)}
     }
 
     fn chop(&mut self) -> char {

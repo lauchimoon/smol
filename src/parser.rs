@@ -2,6 +2,7 @@ use crate::token::Token;
 use crate::token::TokenKind;
 use crate::ast::Expr;
 use crate::ast::Stmt;
+use std::process;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -51,16 +52,16 @@ impl Parser {
             return self.if_stmt();
         }
         let expr = Stmt::Expression(self.expression());
-        self.consume_expected(TokenKind::Semicolon, "statement: expected ';'");
+        self.consume_expected(TokenKind::Semicolon, "expected ';' after expression");
         expr
     }
 
     fn fn_stmt(&mut self) -> Stmt {
         let name = self.consume().clone();
         if !matches!(name.kind, TokenKind::Symbol(_)) {
-            panic!("fn: expected Symbol for name, got {:#?}", name);
+            self.syntax_error("symbol", name.clone());
         }
-        self.consume_expected(TokenKind::OpenParen, "fn: expected '('");
+        self.consume_expected(TokenKind::OpenParen, "expected '('");
 
         let mut params: Vec<(Token, Token)> = Vec::new();
         if !matches!(self.current().kind, TokenKind::CloseParen) {
@@ -70,11 +71,11 @@ impl Parser {
                 params.push(self.param());
             }
         }
-        self.consume_expected(TokenKind::CloseParen, "fn: expected ')'");
+        self.consume_expected(TokenKind::CloseParen, "expected ')' after parameter list");
 
         let ret_type = self.consume().clone();
         if !matches!(ret_type.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
-            panic!("fn: expected Symbol or PrimitiveType for return type, got {:#?}", ret_type);
+            self.syntax_error("symbol or primitive type", ret_type.clone());
         }
         let body = Box::new(Stmt::Block(self.block()));
         Stmt::Func(name, params, ret_type, body)
@@ -83,19 +84,19 @@ impl Parser {
     fn param(&mut self) -> (Token, Token) {
         let name = self.consume().clone();
         if !matches!(name.kind, TokenKind::Symbol(_)) {
-            panic!("fn parameter: expected Symbol for name, got {:#?}", name);
+            self.syntax_error("symbol", name.clone());
         }
-        self.consume_expected(TokenKind::Colon, "fn parameter: expected ':'");
+        self.consume_expected(TokenKind::Colon, "expected ':' after symbol");
         let typ = self.consume().clone();
         if !matches!(typ.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
-            panic!("fn parameter: expected Symbol or PrimitiveType for typ, got {:#?}", typ);
+            self.syntax_error("symbol or primitive type", typ.clone());
         }
         (name, typ)
     }
 
     fn print_stmt(&mut self, newline: bool) -> Stmt {
         let expr = self.expression();
-        self.consume_expected(TokenKind::Semicolon, "print: expected ';'");
+        self.consume_expected(TokenKind::Semicolon, "expected ';' after print");
         Stmt::Print(expr, newline)
     }
 
@@ -105,48 +106,48 @@ impl Parser {
             return Stmt::Return(None);
         }
         let expr = self.expression();
-        self.consume_expected(TokenKind::Semicolon, "return: expected ';'");
+        self.consume_expected(TokenKind::Semicolon, "expected ';' after return");
         Stmt::Return(Some(expr))
     }
 
     fn let_stmt(&mut self) -> Stmt {
         let name = self.consume().clone();
         if !matches!(name.kind, TokenKind::Symbol(_)) {
-            panic!("let: expected Symbol, got {:#?}", name);
+            self.syntax_error("symbol", name.clone());
         }
-        self.consume_expected(TokenKind::Colon, "let: expected ':'");
+        self.consume_expected(TokenKind::Colon, "expected ':' after symbol");
         let typ = self.consume().clone();
         if !matches!(typ.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
-            panic!("let: expected Symbol or PrimitiveType, got {:#?}", typ);
+            self.syntax_error("symbol or primitive type", name.clone());
         }
-        self.consume_expected(TokenKind::Equal, "let: expected '='");
+        self.consume_expected(TokenKind::Equal, "expected '=' after type");
         let value = self.expression();
-        self.consume_expected(TokenKind::Semicolon, "let: expected ';'");
+        self.consume_expected(TokenKind::Semicolon, "expected ';' after expression");
         Stmt::Let(name, typ, value)
     }
 
     fn while_stmt(&mut self) -> Stmt {
-        self.consume_expected(TokenKind::OpenParen, "while: expected '('");
+        self.consume_expected(TokenKind::OpenParen, "expected '(' after while");
         let cond = self.expression();
-        self.consume_expected(TokenKind::CloseParen, "while: expected ')'");
+        self.consume_expected(TokenKind::CloseParen, "expected ')' after expression");
         let body = Box::new(Stmt::Block(self.block()));
         Stmt::While(cond, body)
     }
 
     fn block(&mut self) -> Vec<Stmt> {
         let mut stmts: Vec<Stmt> = Vec::new();
-        self.consume_expected(TokenKind::OpenCurly, "block: expected '{{'");
+        self.consume_expected(TokenKind::OpenCurly, "expected '{' when defining block");
         while !matches!(self.current().kind, TokenKind::CloseCurly) && !self.is_at_end() {
             stmts.push(self.statement());
         }
-        self.consume_expected(TokenKind::CloseCurly, "block: expected '}}'");
+        self.consume_expected(TokenKind::CloseCurly, "expected '}' after defining block");
         stmts
     }
 
     fn if_stmt(&mut self) -> Stmt {
-        self.consume_expected(TokenKind::OpenParen, "if: expected '('");
+        self.consume_expected(TokenKind::OpenParen, "expected '(' after if");
         let cond = self.expression();
-        self.consume_expected(TokenKind::CloseParen, "if: expected ')'");
+        self.consume_expected(TokenKind::CloseParen, "expected ')' after expression");
         let then_block = Box::new(Stmt::Block(self.block()));
         let mut else_block = None;
         if matches!(self.current().kind, TokenKind::Else) {
@@ -173,7 +174,7 @@ impl Parser {
             if matches!(expr, Expr::Variable(_)) {
                 return Expr::Assignment(Box::new(expr), Box::new(value));
             }
-            panic!("invalid assignment target");
+            self.die("invalid assignment target");
         }
         expr
     }
@@ -266,13 +267,13 @@ impl Parser {
             args.push(self.expression());
             while matches!(self.current().kind, TokenKind::Comma) {
                 if args.len() >= 255 {
-                    panic!("func_call: cannot have more than 255 arguments");
+                    self.die("cannot have more than 255 arguments on function call");
                 }
                 self.advance();
                 args.push(self.expression());
             }
         }
-        self.consume_expected(TokenKind::CloseParen, "func_call: expected ')'");
+        self.consume_expected(TokenKind::CloseParen, "expected ')' after function call");
         Expr::FuncCall(Box::new(callee), args)
     }
 
@@ -296,10 +297,12 @@ impl Parser {
         if matches!(self.current().kind, TokenKind::OpenParen) {
             self.advance();
             let expr = self.expression();
-            self.consume_expected(TokenKind::CloseParen, "expression: expected ')'");
+            self.consume_expected(TokenKind::CloseParen, "expected ')' after expression grouping");
             return Expr::Grouping(Box::new(expr));
         }
-        panic!("expression: unknown case {:#?}", self.current().kind);
+
+        self.syntax_error("expression", self.current().clone());
+        unreachable!();
     }
 
     fn previous(&self) -> &Token {
@@ -331,10 +334,22 @@ impl Parser {
         self.current().clone().kind == TokenKind::EOF
     }
 
-    fn consume_expected(&mut self, expected: TokenKind, message: &str) {
-        let check = self.consume().clone().kind;
-        if check != expected {
-            panic!("{}", message);
+    fn syntax_error(&self, expected: &str, token: Token) {
+        println!("{}:{}:{}: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1);
+        process::exit(1);
+    }
+
+    fn die(&self, msg: &str) {
+        let token = self.current();
+        println!("{}:{}:{} {}", token.origin_file, token.pos.0, token.pos.1, msg);
+        process::exit(1);
+    }
+
+    fn consume_expected(&mut self, expected: TokenKind, msg: &str) {
+        let check = self.consume().clone();
+        if check.kind != expected {
+            println!("{}:{}:{} {}", check.origin_file, check.pos.0, check.pos.1, msg);
+            process::exit(1);
         }
     }
 }

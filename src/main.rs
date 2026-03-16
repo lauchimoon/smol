@@ -6,8 +6,9 @@ use std::env;
 
 fn main() {
     let args: Vec<_> = env::args().collect();
-    let source = read_file(&args[1]);
-    let tokens = Lexer::new(source).lex();
+    let filename = args[1].clone();
+    let source = read_file(&filename);
+    let tokens = Lexer::new(&filename, source).lex();
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
     let mut interpreter = Interpreter::new(ast);
