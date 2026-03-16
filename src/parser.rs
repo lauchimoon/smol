@@ -59,7 +59,7 @@ impl Parser {
     fn fn_stmt(&mut self) -> Stmt {
         let name = self.consume().clone();
         if !matches!(name.kind, TokenKind::Symbol(_)) {
-            self.syntax_error("symbol", name.clone());
+            syntax_error("symbol", &name);
         }
         self.consume_expected(TokenKind::OpenParen, "expected '('");
 
@@ -75,7 +75,7 @@ impl Parser {
 
         let ret_type = self.consume().clone();
         if !matches!(ret_type.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
-            self.syntax_error("symbol or primitive type", ret_type.clone());
+            syntax_error("symbol or primitive type", &ret_type);
         }
         let body = Box::new(Stmt::Block(self.block()));
         Stmt::Func(name, params, ret_type, body)
@@ -84,12 +84,12 @@ impl Parser {
     fn param(&mut self) -> (Token, Token) {
         let name = self.consume().clone();
         if !matches!(name.kind, TokenKind::Symbol(_)) {
-            self.syntax_error("symbol", name.clone());
+            syntax_error("symbol", &name);
         }
         self.consume_expected(TokenKind::Colon, "expected ':' after symbol");
         let typ = self.consume().clone();
         if !matches!(typ.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
-            self.syntax_error("symbol or primitive type", typ.clone());
+            syntax_error("symbol or primitive type", &typ);
         }
         (name, typ)
     }
@@ -113,12 +113,12 @@ impl Parser {
     fn let_stmt(&mut self) -> Stmt {
         let name = self.consume().clone();
         if !matches!(name.kind, TokenKind::Symbol(_)) {
-            self.syntax_error("symbol", name.clone());
+            syntax_error("symbol", &name);
         }
         self.consume_expected(TokenKind::Colon, "expected ':' after symbol");
         let typ = self.consume().clone();
         if !matches!(typ.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
-            self.syntax_error("symbol or primitive type", name.clone());
+            syntax_error("symbol or primitive type", &name);
         }
         self.consume_expected(TokenKind::Equal, "expected '=' after type");
         let value = self.expression();
@@ -174,7 +174,7 @@ impl Parser {
             if matches!(expr, Expr::Variable(_)) {
                 return Expr::Assignment(Box::new(expr), Box::new(value));
             }
-            self.die("invalid assignment target");
+            die("invalid assignment target", expr.token());
         }
         expr
     }
@@ -253,8 +253,12 @@ impl Parser {
         let mut expr = self.primary();
         loop {
             if matches!(self.current().kind, TokenKind::OpenParen) {
-                self.advance();
-                expr = self.finish_func_call(expr);
+                if let Expr::Variable(_) = expr {
+                    self.advance();
+                    expr = self.finish_func_call(expr);
+                } else {
+                    syntax_error("symbol", self.previous());
+                }
             }
             break;
         }
@@ -267,7 +271,7 @@ impl Parser {
             args.push(self.expression());
             while matches!(self.current().kind, TokenKind::Comma) {
                 if args.len() >= 255 {
-                    self.die("cannot have more than 255 arguments on function call");
+                    die("cannot have more than 255 arguments on function call", self.current());
                 }
                 self.advance();
                 args.push(self.expression());
@@ -276,6 +280,7 @@ impl Parser {
         self.consume_expected(TokenKind::CloseParen, "expected ')' after function call");
         Expr::FuncCall(Box::new(callee), args)
     }
+
 
     fn primary(&mut self) -> Expr {
         if matches!(self.current().kind, TokenKind::False) {
@@ -301,7 +306,7 @@ impl Parser {
             return Expr::Grouping(Box::new(expr));
         }
 
-        self.syntax_error("expression", self.current().clone());
+        syntax_error("expression", self.current());
         unreachable!();
     }
 
@@ -334,17 +339,6 @@ impl Parser {
         self.current().clone().kind == TokenKind::EOF
     }
 
-    fn syntax_error(&self, expected: &str, token: Token) {
-        println!("{}:{}:{}: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1);
-        process::exit(1);
-    }
-
-    fn die(&self, msg: &str) {
-        let token = self.current();
-        println!("{}:{}:{} {}", token.origin_file, token.pos.0, token.pos.1, msg);
-        process::exit(1);
-    }
-
     fn consume_expected(&mut self, expected: TokenKind, msg: &str) {
         let check = self.consume().clone();
         if check.kind != expected {
@@ -352,4 +346,14 @@ impl Parser {
             process::exit(1);
         }
     }
+}
+
+fn syntax_error(expected: &str, token: &Token) {
+    println!("{}:{}:{}: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1);
+    process::exit(1);
+}
+
+fn die(msg: &str, token: &Token) {
+    println!("{}:{}:{} {}", token.origin_file, token.pos.0, token.pos.1, msg);
+    process::exit(1);
 }
