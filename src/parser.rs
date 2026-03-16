@@ -36,8 +36,8 @@ impl Parser {
             return self.print_stmt(newline);
         }
         if matches!(self.current().kind, TokenKind::Return) {
-            self.advance();
-            return self.return_stmt();
+            let token = self.consume().clone();
+            return self.return_stmt(token);
         }
         if matches!(self.current().kind, TokenKind::Let) {
             self.advance();
@@ -100,14 +100,14 @@ impl Parser {
         Stmt::Print(expr, newline)
     }
 
-    fn return_stmt(&mut self) -> Stmt {
+    fn return_stmt(&mut self, token: Token) -> Stmt {
         if matches!(self.current().kind, TokenKind::Semicolon) {
             self.advance();
-            return Stmt::Return(None);
+            return Stmt::Return(token, None);
         }
         let expr = self.expression();
         self.consume_expected(TokenKind::Semicolon, "expected ';' after return");
-        Stmt::Return(Some(expr))
+        Stmt::Return(token, Some(expr))
     }
 
     fn let_stmt(&mut self) -> Stmt {
@@ -349,11 +349,11 @@ impl Parser {
 }
 
 fn syntax_error(expected: &str, token: &Token) {
-    println!("{}:{}:{}: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1);
+    println!("{}:{}:{}: error: expected {expected} but got {token}", token.origin_file, token.pos.0, token.pos.1);
     process::exit(1);
 }
 
 fn die(msg: &str, token: &Token) {
-    println!("{}:{}:{} {}", token.origin_file, token.pos.0, token.pos.1, msg);
+    println!("{}:{}:{} error: {}", token.origin_file, token.pos.0, token.pos.1, msg);
     process::exit(1);
 }

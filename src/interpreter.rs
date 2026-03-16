@@ -5,6 +5,7 @@ use crate::token::TokenKind;
 use crate::environ::Environment;
 use std::mem;
 use std::fmt;
+use std::process;
 
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -34,10 +35,14 @@ impl fmt::Display for Value {
 }
 
 impl Value {
-    pub fn is_truthy(&self) -> bool {
-        match self {
-            Value::Bool(x) => *x,
-            _ => panic!("expected bool expression"),
+    pub fn typ(&self) -> String {
+        match &self {
+            Value::Nil => "nil".to_string(),
+            Value::Bool(_) => "bool".to_string(),
+            Value::Int(_) => "int".to_string(),
+            Value::Float(_) => "float".to_string(),
+            Value::Str(_) => "string".to_string(),
+            Value::Function(..) => "function".to_string(),
         }
     }
 }
@@ -65,19 +70,25 @@ impl Interpreter {
                 Stmt::Func(..) | Stmt::Let(..) => {
                     let _ = self.execute(stmt, &mut globals);
                 }
-                _ => panic!("expected function or variable declarations at top-level"),
+                _ => {
+                    semantic_error("expected function or variable declarations at top-level", stmt.token());
+                    unreachable!()
+                }
             }
+        }
+
+        if !globals.exists("main".to_string()) {
+            println!("error: 'main' function not found");
+            process::exit(1);
         }
 
         let main_func = globals.get("main".to_string());
         if let Value::Function(_, _, body) = main_func {
             let mut main_env = Environment::from(&globals);
-            match self.execute(&body, &mut main_env) {
-                Err(ControlFlow::Return(_)) => (),
-                Ok(_) => (),
-            }
+            let _ = self.execute(&body, &mut main_env);
         } else {
-            panic!("no main function found");
+            println!("error: found 'main', but it's not a function");
+            process::exit(1);
         }
 
         self.stmts = stmts;
@@ -86,7 +97,7 @@ impl Interpreter {
 
     fn execute(&mut self, stmt: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
         match stmt {
-            Stmt::Return(expr) => {
+            Stmt::Return(_, expr) => {
                 let value = match expr {
                     Some(e) => self.eval(e, environ),
                     None => Value::Nil,
@@ -112,14 +123,14 @@ impl Interpreter {
 
     fn eval(&mut self, expression: &Expr, environ: &mut Environment) -> Value {
         match expression {
-            Expr::Literal(v) => self.eval_literal(v),
-            Expr::Unary(v, op) => self.eval_unary(v, op, environ),
             Expr::Binary(left, op, right) => self.eval_binary(left, op, right, environ),
-            Expr::Grouping(exp) => self.eval(exp, environ),
-            Expr::Variable(sym) => self.eval_variable(sym, environ),
-            Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
+            Expr::Unary(v, op) => self.eval_unary(v, op, environ),
             Expr::FuncCall(name, args) => self.eval_func_call(name, args, environ),
-            _ => todo!()
+            Expr::Literal(v) => self.eval_literal(v),
+            Expr::Variable(sym) => self.eval_variable(sym, environ),
+            Expr::Grouping(exp) => self.eval(exp, environ),
+            Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
+            _ => unreachable!()
         }
     }
 
@@ -127,24 +138,33 @@ impl Interpreter {
         match &v.kind {
             TokenKind::False => Value::Bool(false),
             TokenKind::True => Value::Bool(true),
-            TokenKind::Number(n) => self.eval_number_literal(&n),
-            TokenKind::Str(s) => self.eval_string_literal(&s),
-            _ => todo!(),
+            TokenKind::Number(_) => self.eval_number_literal(v),
+            TokenKind::Str(_) => self.eval_string_literal(v),
+            _ => unreachable!(),
         }
     }
 
-    fn eval_number_literal(&mut self, nstring: &String) -> Value {
+    fn eval_number_literal(&mut self, token: &Token) -> Value {
+        let mut nstring = String::new();
+        if let TokenKind::Number(n) = &token.kind {
+            nstring = n.clone();
+        };
         let s = nstring.as_str();
         if let Ok(x) = s.parse::<i64>() {
             Value::Int(x)
         } else if let Ok(x) = s.parse::<f64>() {
             Value::Float(x)
         } else {
-            panic!("invalid number literal: {}", nstring);
+            semantic_error(format!("invalid number literal '{nstring}'").as_str(), token);
+            unreachable!()
         }
     }
 
-    fn eval_string_literal(&mut self, string: &String) -> Value {
+    fn eval_string_literal(&mut self, token: &Token) -> Value {
+        let mut string = String::new();
+        if let TokenKind::Str(s) = &token.kind {
+            string = s.clone();
+        }
         let s = &string[1..string.len()-1]; // Remove trailing "
         Value::Str(s.to_string())
     }
@@ -158,17 +178,22 @@ impl Interpreter {
                 } else if let Value::Float(f) = value {
                     return Value::Float(-f);
                 } else {
-                    panic!("invalid number type to negate: {:#?}", value);
+                    semantic_error(format!("cannot use '-' on value {value}").as_str(), v);
+                    unreachable!()
                 }
             }
             TokenKind::Not => {
                 if let Value::Bool(x) = value {
                     return Value::Bool(!x);
                 } else {
-                    panic!("invalid bool type to negate: {:#?}", value);
+                    semantic_error(format!("cannot use '!' on value {value}").as_str(), v);
+                    unreachable!()
                 }
             }
-            _ => panic!("not an unary expression: {:#?}", v)
+            _ => {
+                semantic_error(format!("{v} is not a unary expression").as_str(), v);
+                unreachable!()
+            }
         }
     }
 
@@ -179,7 +204,7 @@ impl Interpreter {
     }
 
     fn perform_op(&mut self, left: Value, op: &Token, right: Value) -> Value {
-        match (left, right) {
+        match (left.clone(), right.clone()) {
             (Value::Int(lv), Value::Int(rv)) => {
                 match op.kind {
                     TokenKind::Plus => Value::Int(lv + rv),
@@ -193,7 +218,10 @@ impl Interpreter {
                     TokenKind::GreaterEq => Value::Bool(lv >= rv),
                     TokenKind::Equals => Value::Bool(lv == rv),
                     TokenKind::NotEq => Value::Bool(lv != rv),
-                    _ => panic!("unknown operator {:#?}", op),
+                    _ => {
+                        semantic_error(format!("unknown operator '{op}'").as_str(), op);
+                        unreachable!()
+                    }
                 }
             }
             (Value::Float(lv), Value::Float(rv)) => {
@@ -209,7 +237,10 @@ impl Interpreter {
                     TokenKind::GreaterEq => Value::Bool(lv >= rv),
                     TokenKind::Equals => Value::Bool(lv == rv),
                     TokenKind::NotEq => Value::Bool(lv != rv),
-                    _ => panic!("unknown operator {:#?}", op),
+                    _ => {
+                        semantic_error(format!("unknown operator '{op}'").as_str(), op);
+                        unreachable!()
+                    }
                 }
             }
             (Value::Str(lv), Value::Str(rv)) => {
@@ -217,25 +248,37 @@ impl Interpreter {
                     TokenKind::Plus => Value::Str(lv + &rv),
                     TokenKind::Equals => Value::Bool(lv == rv),
                     TokenKind::NotEq => Value::Bool(lv != rv),
-                    _ => panic!("operator {:#?} not valid for string", op),
+                    _ => {
+                        semantic_error(format!("operator '{op}' is not usable on string").as_str(), op);
+                        unreachable!()
+                    }
                 }
             }
-            _ => panic!("invalid types to operate on"),
+            _ => {
+                semantic_error(format!("cannot use operator '{op}' between '{}' and '{}'", left.typ(), right.typ()).as_str(), op);
+                unreachable!()
+            }
         }
     }
 
     fn eval_logical(&mut self, left: &Expr, op: &Token, right: &Expr, environ: &mut Environment) -> Value {
         let left_value = self.eval(left, environ);
         let right_value = self.eval(right, environ);
-        match (left_value, right_value) {
+        match (left_value.clone(), right_value.clone()) {
             (Value::Bool(lv), Value::Bool(rv)) => {
                 match op.kind {
                     TokenKind::Or => Value::Bool(lv || rv),
                     TokenKind::And => Value::Bool(lv && rv),
-                    _ => panic!("operator {:#?} not valid for logical expression", op),
+                    _ => {
+                        semantic_error(format!("operator '{op}' is not usable in logical expressions").as_str(), op);
+                        unreachable!()
+                    }
                 }
             }
-            _ => panic!("expected two boolean expressions to evaluate"),
+            _ => {
+                semantic_error(format!("cannot use operator '{op}' between '{}' and '{}'", left_value.typ(), right_value.typ()).as_str(), op);
+                unreachable!()
+            }
         }
     }
 
@@ -249,28 +292,33 @@ impl Interpreter {
             Expr::Variable(s) => {
                 match &s.kind {
                     TokenKind::Symbol(sym) => sym.clone(),
-                    _ => panic!("expected symbol for function name"),
+                    _ => unreachable!(),
                 }
             },
-            _ => panic!("expected variable for function name"),
+            _ => unreachable!(),
         };
 
+        if !environ.exists(name_string.clone()) {
+            semantic_error(format!("undefined function '{name_string}'").as_str(), name.token());
+        }
         let func = environ.get(name_string.clone());
         if let Value::Function(_, params, body) = func {
             let arity = params.len();
-            if args.len() != arity {
-                panic!("expected {} arguments, got {}", arity, args.len());
+            if args.len() < arity {
+                semantic_error(format!("too few arguments to function '{name_string}'. expected {}, have {}", arity, args.len()).as_str(), name.token());
+            } else if args.len() > arity {
+                semantic_error(format!("too many arguments to function '{name_string}'. expected {}, have {}", arity, args.len()).as_str(), name.token());
             }
 
             let mut env = Environment::new();
             for (param, arg) in params.iter().zip(arguments.into_iter()) {
-                if let TokenKind::Symbol(name) = &param.0.kind {
-                    if let TokenKind::PrimitiveType(param_name) = &param.1.kind {
-                        if param_name == "void" {
-                            panic!("type of parameter '{name}' cannot be void.");
+                if let TokenKind::Symbol(param_name) = &param.0.kind {
+                    if let TokenKind::PrimitiveType(param_type) = &param.1.kind {
+                        if param_type == "void" {
+                            semantic_error(format!("type of parameter '{param_name}' cannot be void.").as_str(), &param.0);
                         }
                     }
-                    env.insert(name.clone(), arg);
+                    env.insert(param_name.clone(), arg);
                 }
             }
 
@@ -279,15 +327,20 @@ impl Interpreter {
                 Ok(_) => Value::Nil,
             }
         } else {
-            panic!("{name_string} is not a function");
+            semantic_error(format!("'{name_string}' is not a function").as_str(), name.token());
+            unreachable!()
         }
     }
 
     fn eval_variable(&mut self, sym_tk: &Token, environ: &mut Environment) -> Value {
         let name = match &sym_tk.kind {
             TokenKind::Symbol(s) => s.clone(),
-            _ => panic!("expected symbol"),
+            _ => unreachable!(),
         };
+
+        if !environ.exists(name.clone()) {
+            semantic_error(format!("undefined variable '{name}'").as_str(), sym_tk);
+        }
         environ.get(name)
     }
 
@@ -296,30 +349,34 @@ impl Interpreter {
         if let Expr::Variable(name_tk) = expr1 {
             let name = match &name_tk.kind {
                 TokenKind::Symbol(s) => s.clone(),
-                _ => panic!("expected symbol"),
+                _ => unreachable!(),
             };
+
             environ.update(name, rhs);
             Ok(())
         } else {
-            panic!("expected variable on lhs");
+            unreachable!()
         }
     }
 
     // TODO: implement type checking
     fn execute_let(&mut self, name_tk: &Token, typ_tk: &Token, expr: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
-        let name = match &name_tk.kind {
-            TokenKind::Symbol(s) => s.clone(),
-            _ => panic!("expected Symbol"),
+        let mut name = String::new();
+        if let TokenKind::Symbol(s) = &name_tk.kind {
+            name = s.clone();
         };
         let typ = match &typ_tk.kind {
             TokenKind::Symbol(s) | TokenKind::PrimitiveType(s) => s.clone(),
-            _ => panic!("expected Symbol or PrimitiveType"),
+            _ => unreachable!(),
         };
         if typ == "void".to_string() {
-            panic!("type for let expression cannot be void.");
+            semantic_error(format!("type of '{name}' cannot be void").as_str(), typ_tk);
         }
 
         let val = self.eval(expr, environ);
+        if environ.exists(name.clone()) {
+            semantic_error(format!("redefinition of '{name}'").as_str(), name_tk);
+        }
         environ.insert(name, val);
         Ok(())
     }
@@ -342,14 +399,28 @@ impl Interpreter {
     }
 
     fn execute_while(&mut self, cond: &Expr, block: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
-        while self.eval(cond, environ).is_truthy() {
+        let condition = match self.eval(cond, environ) {
+            Value::Bool(x) => x,
+            _ => {
+                semantic_error("expected boolean expression", cond.token());
+                unreachable!()
+            }
+        };
+        while condition {
             self.execute(block, environ)?;
         }
         Ok(())
     }
 
     fn execute_if(&mut self, cond: &Expr, then_branch: &Stmt, else_branch: &Option<Box<Stmt>>, environ: &mut Environment) -> Result<(), ControlFlow> {
-        if self.eval(cond, environ).is_truthy() {
+        let condition = match self.eval(cond, environ) {
+            Value::Bool(x) => x,
+            _ => {
+                semantic_error("expected boolean expression", cond.token());
+                unreachable!()
+            }
+        };
+        if condition {
             self.execute(then_branch, environ)?;
         } else if let Some(els) = else_branch {
             self.execute(els, environ)?;
@@ -360,10 +431,20 @@ impl Interpreter {
     fn execute_func(&mut self, name: &Token, params: &Vec<(Token, Token)>, _ret_type: &Token, body: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
         let name_str = match &name.kind {
             TokenKind::Symbol(s) => s.clone(),
-            _ => panic!("expected symbol for function name"),
+            _ => unreachable!(),
         };
         let func = Value::Function(name_str.clone(), params.clone(), Box::new(body.clone()));
+
+        if environ.exists(name_str.clone()) {
+            semantic_error(format!("function '{name_str}' is being redefined").as_str(), name);
+            unreachable!()
+        }
         environ.insert(name_str, func);
         Ok(())
     }
+}
+
+fn semantic_error(msg: &str, token: &Token) {
+    println!("{}:{}:{}: error: {msg}", token.origin_file, token.pos.0, token.pos.1);
+    process::exit(1);
 }
