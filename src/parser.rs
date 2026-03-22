@@ -292,7 +292,7 @@ impl Parser {
             let token = self.consume().clone();
             return Expr::Literal(token);
         }
-        if matches!(self.current().kind, TokenKind::Str(_) | TokenKind::Number(_)) {
+        if matches!(self.current().kind, TokenKind::Str(_) | TokenKind::Number(_) | TokenKind::Char(_)) {
             let token = self.consume().clone();
             return Expr::Literal(token);
         }

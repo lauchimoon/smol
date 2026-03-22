@@ -15,6 +15,7 @@ pub enum Value {
     Int(i64),
     Float(f64),
     Str(String),
+    Char(char),
     Function(String, Vec<(Token, Token)>, Box<Stmt>),
 }
 
@@ -30,6 +31,7 @@ impl fmt::Display for Value {
             Value::Int(x) => write!(f, "{x}"),
             Value::Float(x) => write!(f, "{x}"),
             Value::Str(x) => write!(f, "{x}"),
+            Value::Char(x) => write!(f, "{x}"),
             Value::Function(name, ..) => write!(f, "<fn {name}>"),
         }
     }
@@ -43,6 +45,7 @@ impl Value {
             Value::Int(_) => "int".to_string(),
             Value::Float(_) => "float".to_string(),
             Value::Str(_) => "string".to_string(),
+            Value::Char(_) => "char".to_string(),
             Value::Function(..) => "function".to_string(),
         }
     }
@@ -139,6 +142,7 @@ impl Interpreter {
             TokenKind::True => Value::Bool(true),
             TokenKind::Number(_) => self.eval_number_literal(v),
             TokenKind::Str(_) => self.eval_string_literal(v),
+            TokenKind::Char(_) => self.eval_char_literal(v),
             _ => unreachable!(),
         }
     }
@@ -166,6 +170,15 @@ impl Interpreter {
         }
         let s = &string[1..string.len()-1]; // Remove trailing "
         Value::Str(s.to_string())
+    }
+
+    fn eval_char_literal(&mut self, token: &Token) -> Value {
+        let mut chr = String::new();
+        if let TokenKind::Char(s) = &token.kind {
+            chr = s.clone();
+        }
+        let c = chr.chars().nth(1).unwrap(); // In-between '
+        Value::Char(c)
     }
 
     fn eval_unary(&mut self, v: &Token, e: &Expr, environ: &mut Environment) -> Value {

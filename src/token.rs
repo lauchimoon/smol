@@ -35,6 +35,7 @@ pub enum TokenKind {
     Symbol(String),
     Str(String),
     Number(String),
+    Char(String),
 
     Func,
     Let,
@@ -92,6 +93,7 @@ impl fmt::Display for Token {
             TokenKind::Symbol(s) => write!(f, "symbol '{s}'"),
             TokenKind::Str(s) => write!(f, "string {s}"),
             TokenKind::Number(n) => write!(f, "number {n}"),
+            TokenKind::Char(c) => write!(f, "char {c}"),
             TokenKind::Func => write!(f, "keyword 'fn'"),
             TokenKind::Let => write!(f, "keyword 'let'"),
             TokenKind::False => write!(f, "keyword 'false'"),

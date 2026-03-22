@@ -1,5 +1,7 @@
 use crate::token::Token;
 use crate::token::TokenKind;
+use crate::format;
+use std::process;
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -62,6 +64,21 @@ impl Lexer {
                 }
                 value.push(c);
                 tokens.push(Token {origin_file: self.filename.clone(), kind: TokenKind::Str(value), pos: (self.line, start)});
+                continue;
+            }
+
+            if c == '\'' {
+                let start = self.chr;
+                let mut value = String::from("'");
+                c = self.chop();
+                value.push(c);
+                c = self.chop();
+                if c != '\'' {
+                    println!("{}:{}:{}: {}: expected one character, got '{c}'", self.filename, self.line, self.chr, format::error("error"));
+                    process::exit(1);
+                }
+                value.push(c);
+                tokens.push(Token {origin_file: self.filename.clone(), kind: TokenKind::Char(value), pos: (self.line, start)});
                 continue;
             }
 
@@ -202,7 +219,7 @@ impl Lexer {
             "return" => TokenKind::Return,
             "print" => TokenKind::Print,
             "println" => TokenKind::Println,
-            "int" | "float" | "bool" | "string" | "void" => TokenKind::PrimitiveType(value),
+            "int" | "float" | "bool" | "string" | "void" | "char" => TokenKind::PrimitiveType(value),
             _ => TokenKind::Symbol(value)
         }
     }
