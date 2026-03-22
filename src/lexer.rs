@@ -27,7 +27,7 @@ impl Lexer {
 
     pub fn lex(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
-        while self.cursor < self.source_len {
+        while !self.is_at_end() {
             let mut c = self.chop();
             if c.is_alphabetic() {
                 let start = self.chr;
@@ -35,6 +35,9 @@ impl Lexer {
                 value.push(c);
                 c = self.chop();
                 while c.is_alphabetic() || c.is_digit(10) || c == '_' {
+                    if self.is_at_end() {
+                        self.error("unterminated symbol", start);
+                    }
                     value.push(c);
                     c = self.chop();
                 }
@@ -48,6 +51,9 @@ impl Lexer {
                 value.push(c);
                 c = self.chop();
                 while c.is_digit(10) || c == '.' {
+                    if self.is_at_end() {
+                        self.error("unterminated number", start);
+                    }
                     value.push(c);
                     c = self.chop();
                 }
@@ -59,6 +65,9 @@ impl Lexer {
                 let mut value = String::from("\"");
                 c = self.chop();
                 while c != '"' {
+                    if self.is_at_end() {
+                        self.error("unterminated string", start);
+                    }
                     value.push(c);
                     c = self.chop();
                 }
@@ -74,8 +83,7 @@ impl Lexer {
                 value.push(c);
                 c = self.chop();
                 if c != '\'' {
-                    println!("{}:{}:{}: {}: expected one character, got '{c}'", self.filename, self.line, self.chr, format::error("error"));
-                    process::exit(1);
+                    self.error(format!("expected one character, got '{c}'").as_str(), self.chr);
                 }
                 value.push(c);
                 tokens.push(Token {origin_file: self.filename.clone(), kind: TokenKind::Char(value), pos: (self.line, start)});
@@ -190,6 +198,10 @@ impl Lexer {
         Token {origin_file: self.filename.clone(), kind: kind, pos: (self.line, self.chr)}
     }
 
+    fn is_at_end(&self) -> bool {
+        self.cursor >= self.source_len
+    }
+
     fn chop(&mut self) -> char {
         if self.cursor >= self.source_len {
             return ' ';
@@ -222,5 +234,10 @@ impl Lexer {
             "int" | "float" | "bool" | "string" | "void" | "char" => TokenKind::PrimitiveType(value),
             _ => TokenKind::Symbol(value)
         }
+    }
+
+    fn error(&self, msg: &str, start: usize) {
+        eprintln!("{}:{}:{start}: {}: {msg}", self.filename, self.line, format::error("error"));
+        process::exit(1);
     }
 }
