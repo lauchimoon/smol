@@ -48,6 +48,8 @@ pub enum TokenKind {
     Print,
     Println,
     PrimitiveType(String),
+    Break,
+    Continue,
 
     EOF,
     Unknown(String),
@@ -105,6 +107,8 @@ impl fmt::Display for Token {
             TokenKind::Print => write!(f, "keyword 'print'"),
             TokenKind::Println => write!(f, "keyword 'println'"),
             TokenKind::PrimitiveType(typ) => write!(f, "keyword '{typ}'"),
+            TokenKind::Break => write!(f, "keyword 'break'"),
+            TokenKind::Continue => write!(f, "keyword 'continue'"),
             TokenKind::EOF => write!(f, "EOF"),
             TokenKind::Unknown(s) => write!(f, "unknown '{s}'"),
         }

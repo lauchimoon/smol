@@ -232,6 +232,8 @@ impl Lexer {
             "print" => TokenKind::Print,
             "println" => TokenKind::Println,
             "int" | "float" | "bool" | "string" | "void" | "char" => TokenKind::PrimitiveType(value),
+            "break" => TokenKind::Break,
+            "continue" => TokenKind::Continue,
             _ => TokenKind::Symbol(value)
         }
     }

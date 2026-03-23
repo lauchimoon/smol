@@ -21,6 +21,8 @@ pub enum Value {
 
 enum ControlFlow {
     Return(Value),
+    Break,
+    Continue,
 }
 
 impl fmt::Display for Value {
@@ -106,6 +108,8 @@ impl Interpreter {
                 };
                 return Err(ControlFlow::Return(value));
             },
+            Stmt::Break(_) => Err(ControlFlow::Break),
+            Stmt::Continue(_) => Err(ControlFlow::Continue),
             Stmt::Expression(e) => {
                 if let Expr::Assignment(expr1, expr2) = e {
                     self.execute_assignment(expr1, expr2, environ)
@@ -335,8 +339,9 @@ impl Interpreter {
             }
 
             match self.execute(&body, &mut env) {
-                Err(ControlFlow::Return(v)) => v,
                 Ok(_) => Value::Nil,
+                Err(ControlFlow::Return(v)) => v,
+                Err(ControlFlow::Break) | Err(ControlFlow::Continue) => Value::Nil,
             }
         } else {
             semantic_error(format!("'{}' is not a function", format::bold(name_string.as_str())).as_str(), name.token());
@@ -412,7 +417,12 @@ impl Interpreter {
 
     fn execute_while(&mut self, cond: &Expr, block: &Stmt, environ: &mut Environment) -> Result<(), ControlFlow> {
         while self.eval_bool(cond, environ) {
-            self.execute(block, environ)?;
+            match self.execute(block, environ) {
+                Ok(_) => (),
+                Err(ControlFlow::Break) => break,
+                Err(ControlFlow::Continue) => continue,
+                Err(ControlFlow::Return(v)) => return Err(ControlFlow::Return(v)),
+            };
         }
         Ok(())
     }

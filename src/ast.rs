@@ -14,6 +14,8 @@ pub enum Expr {
 
 // stmt ::= ("print" | "println") expr ";" |
 //          return expr? ";" |
+//          break ";" |
+//          continue ";" |
 //          let symbol ":" (symbol | PrimitiveType) = expr ";" |
 //          while "(" expr ")" { stmt* } |
 //          if "(" expr ")" { stmt* } (else { stmt* })? |
@@ -24,6 +26,8 @@ pub enum Expr {
 pub enum Stmt {
     Print(Expr, bool),
     Return(Token, Option<Expr>),
+    Break(Token),
+    Continue(Token),
     Let(Token, Token, Expr),
     While(Expr, Box<Stmt>),
     If(Expr, Box<Stmt>, Option<Box<Stmt>>),
@@ -58,6 +62,8 @@ impl Stmt {
             Stmt::Block(stmts) => stmts[0].token(),
             Stmt::Func(t, ..) => t,
             Stmt::Expression(expr) => expr.token(),
+            Stmt::Break(t) => t,
+            Stmt::Continue(t) => t,
         }
     }
 }

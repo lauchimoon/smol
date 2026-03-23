@@ -1,0 +1,17 @@
+fn main() void {
+    let i: int = 0;
+    while (true) {
+        if (i == 10) {
+            i = i + 1;
+            println "Skipping 10";
+            continue;
+        }
+
+        if (i > 15) {
+            break;
+        }
+
+        println i;
+        i = i + 1;
+    }
+}

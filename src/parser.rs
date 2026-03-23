@@ -8,11 +8,12 @@ use std::process;
 pub struct Parser {
     tokens: Vec<Token>,
     cursor: usize,
+    loop_depth: usize,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser {tokens: tokens, cursor: 0}
+        Parser {tokens: tokens, cursor: 0usize, loop_depth: 0usize}
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
@@ -39,6 +40,22 @@ impl Parser {
         if matches!(self.current().kind, TokenKind::Return) {
             let token = self.consume().clone();
             return self.return_stmt(token);
+        }
+        if matches!(self.current().kind, TokenKind::Break) {
+            let token = self.consume().clone();
+            self.consume_expected(TokenKind::Semicolon, "expected ';' after break");
+            if self.loop_depth < 1 {
+                die("cannot use 'break' outside of loop", &token);
+            }
+            return Stmt::Break(token);
+        }
+        if matches!(self.current().kind, TokenKind::Continue) {
+            let token = self.consume().clone();
+            self.consume_expected(TokenKind::Semicolon, "expected ';' after continue");
+            if self.loop_depth < 1 {
+                die("cannot use 'continue' outside of loop", &token);
+            }
+            return Stmt::Continue(token);
         }
         if matches!(self.current().kind, TokenKind::Let) {
             self.advance();
@@ -131,7 +148,9 @@ impl Parser {
         self.consume_expected(TokenKind::OpenParen, "expected '(' after while");
         let cond = self.expression();
         self.consume_expected(TokenKind::CloseParen, "expected ')' after expression");
+        self.loop_depth += 1;
         let body = Box::new(Stmt::Block(self.block()));
+        self.loop_depth -= 1;
         Stmt::While(cond, body)
     }
 
@@ -343,7 +362,7 @@ impl Parser {
     fn consume_expected(&mut self, expected: TokenKind, msg: &str) {
         let check = self.consume().clone();
         if check.kind != expected {
-            println!("{}:{}:{} {}", check.origin_file, check.pos.0, check.pos.1, msg);
+            println!("{}:{}:{} {}: {}", check.origin_file, check.pos.0, check.pos.1, format::error("error"), msg);
             process::exit(1);
         }
     }
