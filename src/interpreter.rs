@@ -181,8 +181,22 @@ impl Interpreter {
         if let TokenKind::Char(s) = &token.kind {
             chr = s.clone();
         }
-        let c = chr.chars().nth(1).unwrap(); // In-between '
-        Value::Char(c)
+        let chars: Vec<char> = chr.chars().collect();
+        if chars[1] == '\\' {
+            match chars[2] {
+                'n' => Value::Char('\n'),
+                'r' => Value::Char('\r'),
+                't' => Value::Char('\t'),
+                '\\' => Value::Char('\\'),
+                '\'' => Value::Char('\''),
+                other => {
+                    error(format!("unknown escape sequence '{other}'").as_str());
+                    unreachable!();
+                }
+            }
+        } else {
+            Value::Char(chars[1])
+        }
     }
 
     fn eval_unary(&mut self, v: &Token, e: &Expr, environ: &mut Environment) -> Value {
@@ -400,10 +414,30 @@ impl Interpreter {
 
     fn execute_print(&mut self, expr: &Expr, newline: &bool, environ: &mut Environment) -> Result<(), ControlFlow> {
         let value = self.eval(expr, environ);
+        let mut escaped_value = String::new();
+        let binding = value.to_string();
+        let mut value_iterator = binding.chars().into_iter();
+
+        while let Some(c) = value_iterator.next() {
+            if c == '\\' {
+                match value_iterator.next() {
+                    Some('n') => escaped_value.push('\n'),
+                    Some('r') => escaped_value.push('\r'),
+                    Some('t') => escaped_value.push('\t'),
+                    Some('\\') => escaped_value.push('\\'),
+                    Some('"') => escaped_value.push('"'),
+                    Some(other) => escaped_value.push(other),
+                    None => break,
+                }
+            } else {
+                escaped_value.push(c);
+            }
+        }
+
         if *newline {
-            println!("{}", value);
+            println!("{}", escaped_value);
         } else {
-            print!("{}", value);
+            print!("{}", escaped_value);
         }
         Ok(())
     }

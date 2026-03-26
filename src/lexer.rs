@@ -68,7 +68,14 @@ impl Lexer {
                     if self.is_at_end() {
                         self.error("unterminated string", start);
                     }
-                    value.push(c);
+
+                    if c == '\\' {
+                        value.push(c);
+                        c = self.chop();
+                        value.push(c);
+                    } else {
+                        value.push(c);
+                    }
                     c = self.chop();
                 }
                 value.push(c);
@@ -80,7 +87,13 @@ impl Lexer {
                 let start = self.chr;
                 let mut value = String::from("'");
                 c = self.chop();
-                value.push(c);
+                if c == '\\' {
+                    value.push(c);
+                    c = self.chop();
+                    value.push(c);
+                } else {
+                    value.push(c);
+                }
                 c = self.chop();
                 if c != '\'' {
                     self.error(format!("expected one character, got '{c}'").as_str(), self.chr);
