@@ -153,12 +153,22 @@ impl Lexer {
                 }
                 tokens.push(self.token(TokenKind::Mul));
             } else if c == '/' {
-                if self.current() == '=' {
-                    tokens.push(self.token(TokenKind::DivEq));
-                    _ = self.chop();
-                    continue;
+                if self.current() == '/' {
+                    let start = self.chr;
+                    let mut value = String::new();
+                    while c != '\n' {
+                        value.push(c);
+                        c = self.chop();
+                    }
+                    tokens.push(Token {origin_file: self.filename.clone(), kind: TokenKind::Comment(value), pos: (self.line, start)});
+                } else {
+                    if self.current() == '=' {
+                        tokens.push(self.token(TokenKind::DivEq));
+                        _ = self.chop();
+                        continue;
+                    }
+                    tokens.push(self.token(TokenKind::Div));
                 }
-                tokens.push(self.token(TokenKind::Div));
             } else if c == '%' {
                 if self.current() == '=' {
                     tokens.push(self.token(TokenKind::ModuloEq));

@@ -13,7 +13,11 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser {tokens: tokens, cursor: 0usize, loop_depth: 0usize}
+        let filtered_tokens: Vec<Token> = tokens
+            .into_iter()
+            .filter(|t| !matches!(t.kind, TokenKind::Comment(_)))
+            .collect();
+        Parser {tokens: filtered_tokens, cursor: 0usize, loop_depth: 0usize}
     }
 
     pub fn parse(&mut self) -> Vec<Stmt> {
