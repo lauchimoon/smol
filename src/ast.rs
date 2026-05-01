@@ -10,6 +10,7 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Assignment(Box<Expr>, Box<Expr>),
     Logical(Box<Expr>, Token, Box<Expr>),
+    Vector(Token, Vec<Expr>),
 }
 
 // stmt ::= ("print" | "println") expr ";" |
@@ -47,6 +48,7 @@ impl Expr {
             Expr::Grouping(expr) => expr.token(),
             Expr::Assignment(expr1, _) => expr1.token(),
             Expr::Logical(_, t, _) => t,
+            Expr::Vector(t, _) => t,
         }
     }
 }

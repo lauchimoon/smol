@@ -138,7 +138,7 @@ impl Parser {
             syntax_error("symbol", &name);
         }
         self.consume_expected(TokenKind::Colon, "expected ':' after symbol");
-        let typ = self.consume().clone();
+        let typ = self.parse_type();
         if !matches!(typ.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
             syntax_error("symbol or primitive type", &name);
         }
@@ -146,6 +146,28 @@ impl Parser {
         let value = self.expression();
         self.consume_expected(TokenKind::Semicolon, "expected ';' after expression");
         Stmt::Let(name, typ, value)
+    }
+
+    fn parse_type(&mut self) -> Token {
+        let typ = self.consume().clone();
+        if let TokenKind::PrimitiveType(ref s) = typ.kind {
+            if s == "vec" {
+                // vec<Symbol | PrimitiveType, Number>
+                self.consume_expected(TokenKind::Less, "expected '<' after vec");
+                let vec_type = self.consume().clone();
+                if !matches!(vec_type.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
+                    syntax_error("symbol or primitive type", &vec_type);
+                }
+                self.consume_expected(TokenKind::Comma, "expected ',' after '<'");
+                let size = self.consume().clone();
+                if !matches!(size.kind, TokenKind::Number(_)) {
+                    syntax_error("symbol or primitive type", &size);
+                }
+                self.consume_expected(TokenKind::Greater, "expected '>' after size");
+                return typ;
+            }
+        }
+        typ
     }
 
     fn while_stmt(&mut self) -> Stmt {

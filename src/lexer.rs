@@ -254,7 +254,9 @@ impl Lexer {
             "return" => TokenKind::Return,
             "print" => TokenKind::Print,
             "println" => TokenKind::Println,
-            "int" | "float" | "bool" | "string" | "void" | "char" => TokenKind::PrimitiveType(value),
+            "int" | "float" | "bool" |
+                "string" | "void" | "char" |
+                "vec" => TokenKind::PrimitiveType(value),
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             _ => TokenKind::Symbol(value)
