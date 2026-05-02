@@ -351,6 +351,19 @@ impl Parser {
             self.consume_expected(TokenKind::CloseParen, "expected ')' after expression grouping");
             return Expr::Grouping(Box::new(expr));
         }
+        if matches!(self.current().kind, TokenKind::OpenCurly) {
+            let token = self.consume().clone();
+            let mut elements = Vec::new();
+            if !matches!(self.current().kind, TokenKind::CloseCurly) {
+                elements.push(self.expression());
+                while matches!(self.current().kind, TokenKind::Comma) {
+                    self.advance();
+                    elements.push(self.expression());
+                }
+            }
+            self.consume_expected(TokenKind::CloseCurly, "expected '}' after vector literal");
+            return Expr::Vector(token, elements);
+        }
 
         syntax_error("expression", self.current());
         unreachable!();
