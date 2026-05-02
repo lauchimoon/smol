@@ -212,7 +212,7 @@ impl Parser {
         if matches!(self.current().kind, TokenKind::Equal) {
             self.advance();
             let value = self.assignment();
-            if matches!(expr, Expr::Variable(_)) {
+            if matches!(expr, Expr::Variable(_) | Expr::Index(..)) {
                 return Expr::Assignment(Box::new(expr), Box::new(value));
             }
             die("invalid assignment target", expr.token());

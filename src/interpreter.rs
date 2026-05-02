@@ -436,16 +436,45 @@ impl Interpreter {
 
     fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
         let rhs = self.eval(expr2, environ);
-        if let Expr::Variable(name_tk) = expr1 {
-            let name = match &name_tk.kind {
-                TokenKind::Symbol(s) => s.clone(),
-                _ => unreachable!(),
-            };
+        match expr1 {
+            Expr::Variable(name_tk) => {
+                let name = match &name_tk.kind {
+                    TokenKind::Symbol(s) => s.clone(),
+                    _ => unreachable!(),
+                };
 
-            environ.update(name, rhs);
-            Ok(())
-        } else {
-            unreachable!()
+                environ.update(name, rhs);
+                return Ok(());
+            }
+            Expr::Index(expr, _, idx) => {
+                if let Expr::Variable(name_tk) = expr.as_ref() {
+                    let name = match &name_tk.kind {
+                        TokenKind::Symbol(s) => s.clone(),
+                        _ => unreachable!(),
+                    };
+
+                    // We allow assignments like these with vectors only
+                    let mut lhs = environ.get(name.clone());
+                    let index = self.eval(idx, environ);
+                    if let Value::Vector(ref mut v) = lhs {
+                        if let Value::Int(i) = index {
+                            if i < 0 || i >= (v.len() as i64) {
+                                semantic_error("index is out of bounds", idx.token());
+                            }
+                            v[i as usize] = rhs;
+                        } else {
+                            semantic_error("cannot index with non-integer values", idx.token());
+                            unreachable!()
+                        }
+                    } else {
+                        semantic_error("target is not assignable", expr1.token());
+                    }
+
+                    environ.update(name, lhs);
+                };
+                return Ok(());
+            }
+            _ => unreachable!(),
         }
     }
 
