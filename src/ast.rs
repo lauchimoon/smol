@@ -11,6 +11,7 @@ pub enum Expr {
     Assignment(Box<Expr>, Box<Expr>),
     Logical(Box<Expr>, Token, Box<Expr>),
     Vector(Token, Vec<Expr>),
+    Index(Box<Expr>, Token, Box<Expr>),
 }
 
 // stmt ::= ("print" | "println") expr ";" |
@@ -49,6 +50,7 @@ impl Expr {
             Expr::Assignment(expr1, _) => expr1.token(),
             Expr::Logical(_, t, _) => t,
             Expr::Vector(t, _) => t,
+            Expr::Index(_, t, _) => t,
         }
     }
 }

@@ -300,6 +300,11 @@ impl Parser {
                 } else {
                     syntax_error("symbol", self.previous());
                 }
+            } else if matches!(self.current().kind, TokenKind::OpenBracket) {
+                let bracket = self.consume().clone();
+                let index = self.expression();
+                self.consume_expected(TokenKind::CloseBracket, "expected ']' after index");
+                expr = Expr::Index(Box::new(expr), bracket, Box::new(index));
             }
             break;
         }

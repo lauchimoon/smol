@@ -118,6 +118,10 @@ impl Lexer {
                 tokens.push(self.token(TokenKind::OpenCurly));
             } else if c == '}' {
                 tokens.push(self.token(TokenKind::CloseCurly));
+            } else if c == '[' {
+                tokens.push(self.token(TokenKind::OpenBracket));
+            } else if c == ']' {
+                tokens.push(self.token(TokenKind::CloseBracket));
             } else if c == ',' {
                 tokens.push(self.token(TokenKind::Comma));
             } else if c == ';' {
