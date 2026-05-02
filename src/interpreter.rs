@@ -148,9 +148,10 @@ impl Interpreter {
             Expr::FuncCall(name, args) => self.eval_func_call(name, args, environ),
             Expr::Literal(v) => self.eval_literal(v),
             Expr::Variable(sym) => self.eval_variable(sym, environ),
-            Expr::Grouping(exp) => self.eval(exp, environ),
+            Expr::Grouping(expr) => self.eval(expr, environ),
             Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
             Expr::Vector(_, vec) => self.eval_vector(vec, environ),
+            Expr::Index(expr, _, index_expr) => self.eval_index(expr, index_expr, environ),
             _ => unreachable!()
         }
     }
@@ -396,6 +397,26 @@ impl Interpreter {
             values.push(self.eval(item, environ));
         }
         Value::Vector(values)
+    }
+
+    fn eval_index(&mut self, expr: &Expr, index_expr: &Expr, environ: &mut Environment) -> Value {
+        let origin = self.eval(expr, environ);
+        let index = self.eval(index_expr, environ);
+        if origin.typ() != "vector" {
+            semantic_error(format!("cannot index value of type '{}'", origin.typ()).as_str(), expr.token());
+        }
+
+        match origin {
+            Value::Vector(ref v) => {
+                if let Value::Int(i) = index {
+                    return v[i as usize].clone();
+                } else {
+                    semantic_error("cannot index with non-integer values", index_expr.token());
+                    unreachable!()
+                }
+            }
+            _ => todo!(),
+        }
     }
 
     fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
