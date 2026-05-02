@@ -344,6 +344,10 @@ impl Interpreter {
             _ => unreachable!(),
         };
 
+        if let Some(result) = self.call_builtin(&name_string, &arguments, name.token()) {
+            return result;
+        }
+
         if !environ.exists(name_string.clone()) {
             semantic_error(format!("undefined function '{}'", format::bold(name_string.as_str())).as_str(), name.token());
         }
@@ -376,6 +380,25 @@ impl Interpreter {
         } else {
             semantic_error(format!("'{}' is not a function", format::bold(name_string.as_str())).as_str(), name.token());
             unreachable!()
+        }
+    }
+
+    fn call_builtin(&mut self, name: &str, args: &Vec<Value>, token: &Token) -> Option<Value> {
+        match name {
+            "len" => {
+                if args.len() != 1 {
+                    semantic_error("len expects one argument", token);
+                }
+                match &args[0] {
+                    Value::Vector(v) => Some(Value::Int(v.len() as i64)),
+                    Value::Str(s) => Some(Value::Int(s.len() as i64)),
+                    _ => {
+                        semantic_error("len argument must be vector or string", token);
+                        unreachable!()
+                    }
+                }
+            },
+            _ => None,
         }
     }
 
