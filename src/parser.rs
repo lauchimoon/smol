@@ -152,18 +152,13 @@ impl Parser {
         let typ = self.consume().clone();
         if let TokenKind::PrimitiveType(ref s) = typ.kind {
             if s == "vec" {
-                // vec<Symbol | PrimitiveType, Number>
+                // vec<Symbol | PrimitiveType>
                 self.consume_expected(TokenKind::Less, "expected '<' after vec");
                 let vec_type = self.consume().clone();
                 if !matches!(vec_type.kind, TokenKind::Symbol(_) | TokenKind::PrimitiveType(_)) {
                     syntax_error("symbol or primitive type", &vec_type);
                 }
-                self.consume_expected(TokenKind::Comma, "expected ',' after '<'");
-                let size = self.consume().clone();
-                if !matches!(size.kind, TokenKind::Number(_)) {
-                    syntax_error("symbol or primitive type", &size);
-                }
-                self.consume_expected(TokenKind::Greater, "expected '>' after size");
+                self.consume_expected(TokenKind::Greater, "expected '>' after vector type");
                 return typ;
             }
         }
