@@ -150,7 +150,7 @@ impl Interpreter {
             Expr::Variable(sym) => self.eval_variable(sym, environ),
             Expr::Grouping(exp) => self.eval(exp, environ),
             Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
-            Expr::Vector(_, vec) => self.eval_vector(vec),
+            Expr::Vector(_, vec) => self.eval_vector(vec, environ),
             _ => unreachable!()
         }
     }
@@ -390,8 +390,12 @@ impl Interpreter {
         environ.get(name)
     }
 
-    fn eval_vector(&mut self, vec: &Vec<Expr>) -> Value {
-        Value::Nil
+    fn eval_vector(&mut self, vec: &Vec<Expr>, environ: &mut Environment) -> Value {
+        let mut values: Vec<Value> = Vec::new();
+        for item in vec {
+            values.push(self.eval(item, environ));
+        }
+        Value::Vector(values)
     }
 
     fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
