@@ -17,11 +17,8 @@ fn main() {
     let tokens = Lexer::new(&filename, source).lex();
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    println!("{:#?}", ast);
-    /*
     let mut interpreter = Interpreter::new(ast);
     interpreter.interpret();
-    */
 }
 
 fn read_file(filepath: &str) -> String {

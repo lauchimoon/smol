@@ -16,6 +16,7 @@ pub enum Value {
     Float(f64),
     Str(String),
     Char(char),
+    Vector(Vec<Value>),
     Function(String, Vec<(Token, Token)>, Box<Stmt>),
 }
 
@@ -34,9 +35,21 @@ impl fmt::Display for Value {
             Value::Float(x) => write!(f, "{x}"),
             Value::Str(x) => write!(f, "{x}"),
             Value::Char(x) => write!(f, "{x}"),
+            Value::Vector(v) => write_vec(f, v),
             Value::Function(name, ..) => write!(f, "<fn {name}>"),
         }
     }
+}
+
+fn write_vec(f: &mut fmt::Formatter<'_>, v: &Vec<Value>) -> fmt::Result {
+    write!(f, "{{")?;
+    for (i, item) in v.iter().enumerate() {
+        if i > 0 {
+            write!(f, ", ")?;
+        }
+        write!(f, "{}", item)?;
+    }
+    write!(f, "}}")
 }
 
 impl Value {
@@ -48,6 +61,7 @@ impl Value {
             Value::Float(_) => "float".to_string(),
             Value::Str(_) => "string".to_string(),
             Value::Char(_) => "char".to_string(),
+            Value::Vector(..) => "vector".to_string(),
             Value::Function(..) => "function".to_string(),
         }
     }
@@ -136,6 +150,7 @@ impl Interpreter {
             Expr::Variable(sym) => self.eval_variable(sym, environ),
             Expr::Grouping(exp) => self.eval(exp, environ),
             Expr::Logical(left, op, right) => self.eval_logical(left, op, right, environ),
+            Expr::Vector(_, vec) => self.eval_vector(vec),
             _ => unreachable!()
         }
     }
@@ -373,6 +388,10 @@ impl Interpreter {
             semantic_error(format!("undefined variable '{}'", format::bold(name.as_str())).as_str(), sym_tk);
         }
         environ.get(name)
+    }
+
+    fn eval_vector(&mut self, vec: &Vec<Expr>) -> Value {
+        Value::Nil
     }
 
     fn execute_assignment(&mut self, expr1: &Expr, expr2: &Expr, environ: &mut Environment) -> Result<(), ControlFlow> {
