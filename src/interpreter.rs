@@ -402,7 +402,7 @@ impl Interpreter {
     fn eval_index(&mut self, expr: &Expr, index_expr: &Expr, environ: &mut Environment) -> Value {
         let origin = self.eval(expr, environ);
         let index = self.eval(index_expr, environ);
-        if origin.typ() != "vector" {
+        if origin.typ() != "vector" && origin.typ() != "string" {
             semantic_error(format!("cannot index value of type '{}'", origin.typ()).as_str(), expr.token());
         }
 
@@ -410,10 +410,21 @@ impl Interpreter {
             Value::Vector(ref v) => {
                 if let Value::Int(i) = index {
                     if i < 0 || i >= (v.len() as i64) {
-                    semantic_error("index is out of bounds", index_expr.token());
+                        semantic_error("index is out of bounds", index_expr.token());
                     }
-
                     return v[i as usize].clone();
+                } else {
+                    semantic_error("cannot index with non-integer values", index_expr.token());
+                    unreachable!()
+                }
+            }
+            Value::Str(ref s) => {
+                if let Value::Int(i) = index {
+                    if i < 0 || i >= (s.len() as i64) {
+                        semantic_error("index is out of bounds", index_expr.token());
+                    }
+                    let chars: Vec<_> = s.chars().collect();
+                    return Value::Char(chars[i as usize]);
                 } else {
                     semantic_error("cannot index with non-integer values", index_expr.token());
                     unreachable!()
