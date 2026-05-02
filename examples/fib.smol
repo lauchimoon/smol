@@ -1,0 +1,9 @@
+fn main() void {
+    let values: vec<int> = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    let i: int = 2;
+    while (i < len(values)) {
+        values[i] = values[i-1] + values[i-2];
+        i = i + 1;
+    }
+    println values;
+}
