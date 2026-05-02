@@ -409,6 +409,10 @@ impl Interpreter {
         match origin {
             Value::Vector(ref v) => {
                 if let Value::Int(i) = index {
+                    if i < 0 || i >= (v.len() as i64) {
+                    semantic_error("index is out of bounds", index_expr.token());
+                    }
+
                     return v[i as usize].clone();
                 } else {
                     semantic_error("cannot index with non-integer values", index_expr.token());
